@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: AIDomesticCoreAIJ API
+  version: 1.0.0
+paths:
+  /infer:
+    post:
+      summary: Run AI inference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input:
+                  type: string
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Inference result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  output:
+                    type: string
+  /tools/execute:
+    post:
+      summary: Execute tool via kernel
+      responses:
+        '200':
+          description: Tool execution result
