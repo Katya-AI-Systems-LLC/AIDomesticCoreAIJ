@@ -466,5 +466,3 @@ It is designed to outlive models, vendors, and trends.
 **Katya-AI-Systems-LLC**
 **Engineering AI as Critical Infrastructure**
 
-
-Скажи слово — и пойдём ещё глубже.
