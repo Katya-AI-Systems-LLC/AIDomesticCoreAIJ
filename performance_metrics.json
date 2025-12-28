@@ -1,0 +1,229 @@
+{
+  "export_time": "2025-12-26T20:10:12.726638",
+  "operation_metrics": {
+    "test_operation": {
+      "operation_name": "test_operation",
+      "total_calls": 5,
+      "total_time": 0.2509496212005615,
+      "min_time": 0.05008220672607422,
+      "max_time": 0.05025815963745117,
+      "avg_time": 0.0501899242401123,
+      "errors": 0,
+      "last_call": "2025-12-26 20:10:10.725006"
+    },
+    "__main__.test_profile_function": {
+      "operation_name": "__main__.test_profile_function",
+      "total_calls": 5,
+      "total_time": 0.00093841552734375,
+      "min_time": 0.00014495849609375,
+      "max_time": 0.00022101402282714844,
+      "avg_time": 0.00018768310546875,
+      "errors": 0,
+      "last_call": "2025-12-26 20:10:10.725290"
+    }
+  },
+  "recent_metrics": [
+    {
+      "name": "operation_test_operation_duration",
+      "value": 0.05022072792053223,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.523225",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "profile___main__.test_profile_function_duration",
+      "value": 0.00020933151245117188,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.523480",
+      "tags": {}
+    },
+    {
+      "name": "profile___main__.test_profile_function_memory_delta",
+      "value": 4096,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:10.523485",
+      "tags": {}
+    },
+    {
+      "name": "operation___main__.test_profile_function_duration",
+      "value": 0.00020933151245117188,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.523494",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "operation_test_operation_duration",
+      "value": 0.05025815963745117,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.573785",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "profile___main__.test_profile_function_duration",
+      "value": 0.00014495849609375,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.573961",
+      "tags": {}
+    },
+    {
+      "name": "profile___main__.test_profile_function_memory_delta",
+      "value": 0,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:10.573964",
+      "tags": {}
+    },
+    {
+      "name": "operation___main__.test_profile_function_duration",
+      "value": 0.00014495849609375,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.573969",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "operation_test_operation_duration",
+      "value": 0.05017232894897461,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.624191",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "profile___main__.test_profile_function_duration",
+      "value": 0.0002181529998779297,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.624453",
+      "tags": {}
+    },
+    {
+      "name": "profile___main__.test_profile_function_memory_delta",
+      "value": 0,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:10.624457",
+      "tags": {}
+    },
+    {
+      "name": "operation___main__.test_profile_function_duration",
+      "value": 0.0002181529998779297,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.624463",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "operation_test_operation_duration",
+      "value": 0.0502161979675293,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.674710",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "profile___main__.test_profile_function_duration",
+      "value": 0.00014495849609375,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.674885",
+      "tags": {}
+    },
+    {
+      "name": "profile___main__.test_profile_function_memory_delta",
+      "value": 0,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:10.674888",
+      "tags": {}
+    },
+    {
+      "name": "operation___main__.test_profile_function_duration",
+      "value": 0.00014495849609375,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.674893",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "operation_test_operation_duration",
+      "value": 0.05008220672607422,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.725024",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "profile___main__.test_profile_function_duration",
+      "value": 0.00022101402282714844,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.725282",
+      "tags": {}
+    },
+    {
+      "name": "profile___main__.test_profile_function_memory_delta",
+      "value": 0,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:10.725286",
+      "tags": {}
+    },
+    {
+      "name": "operation___main__.test_profile_function_duration",
+      "value": 0.00022101402282714844,
+      "unit": "seconds",
+      "timestamp": "2025-12-26 20:10:10.725291",
+      "tags": {
+        "success": "True"
+      }
+    },
+    {
+      "name": "system_cpu_usage",
+      "value": 49.9,
+      "unit": "%",
+      "timestamp": "2025-12-26 20:10:11.473467",
+      "tags": {}
+    },
+    {
+      "name": "system_memory_usage",
+      "value": 88.1,
+      "unit": "%",
+      "timestamp": "2025-12-26 20:10:11.474008",
+      "tags": {}
+    },
+    {
+      "name": "system_memory_available",
+      "value": 942256128,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:11.474017",
+      "tags": {}
+    },
+    {
+      "name": "system_disk_usage",
+      "value": 74.1790851609223,
+      "unit": "%",
+      "timestamp": "2025-12-26 20:10:11.474094",
+      "tags": {}
+    },
+    {
+      "name": "process_memory",
+      "value": 25096192,
+      "unit": "bytes",
+      "timestamp": "2025-12-26 20:10:11.474146",
+      "tags": {}
+    },
+    {
+      "name": "process_cpu",
+      "value": 0.0,
+      "unit": "%",
+      "timestamp": "2025-12-26 20:10:11.474171",
+      "tags": {}
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+Generated response to: Test file saving
+
+This is a simulated response from gigachat3-702b.
+Maximum tokens requested: 50
+Language: en
+[SIMULATED - No API key provided or API unavailable]

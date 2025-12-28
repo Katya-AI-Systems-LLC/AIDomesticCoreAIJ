@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIPlatform Quantum Infrastructure Zero SDK</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Language Selector -->
+    <div class="language-selector">
+        <select id="language-select" onchange="changeLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="zh">中文</option>
+            <option value="ar">العربية</option>
+        </select>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-icon">⚛️</span>
+                <span class="logo-text">AIPlatform</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home" data-i18n="nav.home">Home</a></li>
+                <li><a href="#features" data-i18n="nav.features">Features</a></li>
+                <li><a href="#docs" data-i18n="nav.documentation">Documentation</a></li>
+                <li><a href="#examples" data-i18n="nav.examples">Examples</a></li>
+                <li><a href="#demo" data-i18n="nav.demo">Demo</a></li>
+                <li><a href="#community" data-i18n="nav.community">Community</a></li>
+            </ul>
+            <div class="nav-buttons">
+                <a href="https://github.com/REChain-Network-Solutions/AIPlatform" class="btn btn-outline" data-i18n="nav.github">GitHub</a>
+                <a href="#get-started" class="btn btn-primary" data-i18n="nav.get_started">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title" data-i18n="hero.title">
+                    Quantum-AI Infrastructure<br>
+                    <span class="highlight">Zero SDK</span>
+                </h1>
+                <p class="hero-subtitle" data-i18n="hero.subtitle">
+                    The next-generation SDK for quantum computing, federated AI, computer vision,<br>
+                    and zero-infrastructure networking. Built for the Web6 era.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#get-started" class="btn btn-primary btn-large" data-i18n="hero.get_started">Get Started</a>
+                    <a href="#demo" class="btn btn-outline btn-large" data-i18n="hero.view_demo">View Demo</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" data-i18n="hero.stats.modules">10+</span>
+                        <span class="stat-label" data-i18n="hero.stats.modules_label">Core Modules</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-i18n="hero.stats.algorithms">50+</span>
+                        <span class="stat-label" data-i18n="hero.stats.algorithms_label">Quantum Algorithms</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-i18n="hero.stats.examples">100+</span>
+                        <span class="stat-label" data-i18n="hero.stats.examples_label">Examples</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="code-preview">
+                    <pre><code class="language-python">from aiplatform import AIPlatform
+
+# Initialize platform
+platform = AIPlatform()
+
+# Run quantum-AI demo
+result = platform.run_demo()
+print(result)</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="features.title">Revolutionary Features</h2>
+                <p data-i18n="features.subtitle">Built for the future of quantum-AI integration</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span>⚛️</span>
+                    </div>
+                    <h3 data-i18n="features.quantum.title">Quantum Computing</h3>
+                    <p data-i18n="features.quantum.description">Full Qiskit Runtime integration with support for IBM Nighthawk & Heron QPUs, quantum algorithms (VQE, QAOA, Grover, Shor), and quantum-safe cryptography.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span>🌐</span>
+                    </div>
+                    <h3 data-i18n="features.zero.title">Zero Infrastructure</h3>
+                    <p data-i18n="features.zero.description">Quantum Infrastructure Zero (QIZ) with no servers, no DNS, no routes. Post-DNS interaction layer and Quantum Mesh Protocol (QMP).</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span>🤝</span>
+                    </div>
+                    <h3 data-i18n="features.federated.title">Federated Quantum AI</h3>
+                    <p data-i18n="features.federated.description">Distributed training between nodes with hybrid quantum-classical learning, model marketplace, and NFT-based model weights.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span>👁️</span>
+                    </div>
+                    <h3 data-i18n="features.vision.title">Vision & Data Lab</h3>
+                    <p data-i18n="features.vision.description">Computer vision, 3D processing, multimodal AI, WebXR integration, big data pipelines, and streaming analytics.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span>🧠</span>
+                    </div>
+                    <h3 data-i18n="features.genai.title">GenAI Integration</h3>
+                    <p data-i18n="features.genai.description">Support for OpenAI, Claude, LLaMA, GigaChat3-702B, Katya AI, diffusion models, and MCP protocol interactions.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span>🛡️</span>
+                    </div>
+                    <h3 data-i18n="features.security.title">Quantum Security</h3>
+                    <p data-i18n="features.security.description">Quantum-safe cryptography (Kyber, Dilithium), Zero-Trust model, and DIDN implementation.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- IBM × REChain Integration -->
+    <section class="ibm-integration">
+        <div class="container">
+            <div class="integration-content">
+                <div class="integration-logo">
+                    <span>IBM × REChain</span>
+                </div>
+                <h2 data-i18n="ibm.title">Enterprise Quantum Integration</h2>
+                <p data-i18n="ibm.subtitle">Powered by IBM Quantum with Qiskit Runtime, Quantum Safe Crypto, IBM Nighthawk & Heron support, and IBM Hybrid Cloud integration.</p>
+                <div class="integration-features">
+                    <div class="integration-feature">
+                        <h4 data-i18n="ibm.qiskit.title">Qiskit Runtime</h4>
+                        <p data-i18n="ibm.qiskit.description">Seamless integration with IBM's quantum computing platform</p>
+                    </div>
+                    <div class="integration-feature">
+                        <h4 data-i18n="ibm.crypto.title">Quantum Safe Crypto</h4>
+                        <p data-i18n="ibm.crypto.description">Cryptography resistant to quantum computer attacks</p>
+                    </div>
+                    <div class="integration-feature">
+                        <h4 data-i18n="ibm.cloud.title">Hybrid Cloud</h4>
+                        <p data-i18n="ibm.cloud.description">Enterprise-grade deployment across quantum and classical infrastructure</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Quantum Revolution -->
+    <section class="quantum-revolution">
+        <div class="container">
+            <div class="revolution-content">
+                <h2 data-i18n="revolution.title">AI Quantum Revolution</h2>
+                <p data-i18n="revolution.subtitle">From Web 3 to Web 6: Multiplatform quantum engineering, meta-consciousness, and DAO governance.</p>
+                <div class="revolution-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h4 data-i18n="revolution.web3.title">Web 3 Foundation</h4>
+                        <p data-i18n="revolution.web3.description">Decentralized web with blockchain and smart contracts</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h4 data-i18n="revolution.web4.title">Web 4 Evolution</h4>
+                        <p data-i18n="revolution.web4.description">Semantic web with AI-powered content understanding</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h4 data-i18n="revolution.web5.title">Web 5 Integration</h4>
+                        <p data-i18n="revolution.web5.description">Quantum-AI hybrid systems with distributed intelligence</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <h4 data-i18n="revolution.web6.title">Web 6 Revolution</h4>
+                        <p data-i18n="revolution.web6.description">Meta-consciousness platforms with quantum neural networks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section id="docs" class="docs">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="docs.title">Comprehensive Documentation</h2>
+                <p data-i18n="docs.subtitle">Everything you need to build with AIPlatform</p>
+            </div>
+            <div class="docs-grid">
+                <div class="doc-card">
+                    <h3 data-i18n="docs.quick_start.title">Quick Start Guide</h3>
+                    <p data-i18n="docs.quick_start.description">Get up and running with AIPlatform in minutes</p>
+                    <a href="docs/quick_start.md" class="doc-link" data-i18n="docs.quick_start.link">Read Guide →</a>
+                </div>
+                <div class="doc-card">
+                    <h3 data-i18n="docs.quantum.title">Quantum Integration</h3>
+                    <p data-i18n="docs.quantum.description">Complete guide to quantum computing integration</p>
+                    <a href="docs/quantum_integration_guide.md" class="doc-link" data-i18n="docs.quantum.link">Read Guide →</a>
+                </div>
+                <div class="doc-card">
+                    <h3 data-i18n="docs.vision.title">Vision Module API</h3>
+                    <p data-i18n="docs.vision.description">Computer vision and data processing APIs</p>
+                    <a href="docs/vision_module_api.md" class="doc-link" data-i18n="docs.vision.link">Read API →</a>
+                </div>
+                <div class="doc-card">
+                    <h3 data-i18n="docs.federated.title">Federated Training</h3>
+                    <p data-i18n="docs.federated.description">Distributed AI training with quantum acceleration</p>
+                    <a href="docs/federated_training_manual.md" class="doc-link" data-i18n="docs.federated.link">Read Manual →</a>
+                </div>
+                <div class="doc-card">
+                    <h3 data-i18n="docs.qiz.title">Web6 & QIZ Architecture</h3>
+                    <p data-i18n="docs.qiz.description">Zero-infrastructure networking and protocols</p>
+                    <a href="docs/web6_qiz_architecture.md" class="doc-link" data-i18n="docs.qiz.link">Read Architecture →</a>
+                </div>
+                <div class="doc-card">
+                    <h3 data-i18n="docs.api.title">API Reference</h3>
+                    <p data-i18n="docs.api.description">Complete API documentation and examples</p>
+                    <a href="docs/api_reference.md" class="doc-link" data-i18n="docs.api.link">View Reference →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples Section -->
+    <section id="examples" class="examples">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="examples.title">Working Examples</h2>
+                <p data-i18n="examples.subtitle">Learn by doing with real-world examples</p>
+            </div>
+            <div class="examples-grid">
+                <div class="example-card">
+                    <h3 data-i18n="examples.quantum.title">Quantum + AI Hybrid</h3>
+                    <p data-i18n="examples.quantum.description">Model with quantum processing unit and GPU components</p>
+                    <a href="aiplatform/examples/quantum_example.py" class="example-link" data-i18n="examples.quantum.link">View Code →</a>
+                </div>
+                <div class="example-card">
+                    <h3 data-i18n="examples.vision.title">Vision Recognition</h3>
+                    <p data-i18n="examples.vision.description">Object detection, face recognition, and gesture processing</p>
+                    <a href="aiplatform/examples/vision_example.py" class="example-link" data-i18n="examples.vision.link">View Code →</a>
+                </div>
+                <div class="example-card">
+                    <h3 data-i18n="examples.federated.title">Federated Training</h3>
+                    <p data-i18n="examples.federated.description">Distributed model training across quantum nodes</p>
+                    <a href="aiplatform/examples/federated_example.py" class="example-link" data-i18n="examples.federated.link">View Code →</a>
+                </div>
+                <div class="example-card">
+                    <h3 data-i18n="examples.multimodal.title">Multimodal AI</h3>
+                    <p data-i18n="examples.multimodal.description">Text, audio, video, and 3D processing integration</p>
+                    <a href="aiplatform/examples/genai_example.py" class="example-link" data-i18n="examples.multimodal.link">View Code →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section id="demo" class="demo">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="demo.title">Interactive Demo</h2>
+                <p data-i18n="demo.subtitle">Experience the power of quantum-AI integration</p>
+            </div>
+            <div class="demo-content">
+                <div class="demo-player">
+                    <div class="demo-placeholder">
+                        <span class="demo-icon">▶️</span>
+                        <p data-i18n="demo.placeholder">AIPlatform Quantum Revolution Demo</p>
+                    </div>
+                </div>
+                <div class="demo-description">
+                    <h3 data-i18n="demo.description.title">Quantum-AI Platform Demo</h3>
+                    <p data-i18n="demo.description.subtitle">Watch as we demonstrate the integration of quantum computing with artificial intelligence, showcasing:</p>
+                    <ul>
+                        <li data-i18n="demo.features.qpu">Quantum circuit execution on IBM QPUs</li>
+                        <li data-i18n="demo.features.federated">Federated learning across distributed nodes</li>
+                        <li data-i18n="demo.features.vision">Computer vision processing with 3D object recognition</li>
+                        <li data-i18n="demo.features.qiz">Zero-infrastructure deployment with QIZ</li>
+                        <li data-i18n="demo.features.multimodal">Multimodal AI processing with GigaChat3-702B</li>
+                    </ul>
+                    <a href="#" class="btn btn-primary" data-i18n="demo.download">Download Demo</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section id="community" class="community">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="community.title">Join Our Community</h2>
+                <p data-i18n="community.subtitle">Connect with quantum-AI developers and researchers</p>
+            </div>
+            <div class="community-grid">
+                <div class="community-card">
+                    <h3 data-i18n="community.github.title">GitHub</h3>
+                    <p data-i18n="community.github.description">Contribute to the open-source project</p>
+                    <a href="https://github.com/REChain-Network-Solutions/AIPlatform" class="community-link" data-i18n="community.github.link">View Repository →</a>
+                </div>
+                <div class="community-card">
+                    <h3 data-i18n="community.docs.title">Documentation</h3>
+                    <p data-i18n="community.docs.description">Comprehensive guides and API references</p>
+                    <a href="#docs" class="community-link" data-i18n="community.docs.link">View Docs →</a>
+                </div>
+                <div class="community-card">
+                    <h3 data-i18n="community.papers.title">Research Papers</h3>
+                    <p data-i18n="community.papers.description">Whitepapers on quantum infrastructure and AI</p>
+                    <a href="docs/whitepapers/" class="community-link" data-i18n="community.papers.link">Read Papers →</a>
+                </div>
+                <div class="community-card">
+                    <h3 data-i18n="community.support.title">Support</h3>
+                    <p data-i18n="community.support.description">Get help from our developer community</p>
+                    <a href="#" class="community-link" data-i18n="community.support.link">Get Support →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <span class="logo-icon">⚛️</span>
+                    <span class="logo-text">AIPlatform</span>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4 data-i18n="footer.product.title">Product</h4>
+                        <ul>
+                            <li><a href="#features" data-i18n="footer.product.features">Features</a></li>
+                            <li><a href="#docs" data-i18n="footer.product.documentation">Documentation</a></li>
+                            <li><a href="#examples" data-i18n="footer.product.examples">Examples</a></li>
+                            <li><a href="#demo" data-i18n="footer.product.demo">Demo</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4 data-i18n="footer.resources.title">Resources</h4>
+                        <ul>
+                            <li><a href="docs/api_reference.md" data-i18n="footer.resources.api">API Reference</a></li>
+                            <li><a href="docs/whitepapers/" data-i18n="footer.resources.papers">Whitepapers</a></li>
+                            <li><a href="#" data-i18n="footer.resources.blog">Blog</a></li>
+                            <li><a href="#" data-i18n="footer.resources.research">Research</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4 data-i18n="footer.company.title">Company</h4>
+                        <ul>
+                            <li><a href="#" data-i18n="footer.company.about">About</a></li>
+                            <li><a href="#" data-i18n="footer.company.careers">Careers</a></li>
+                            <li><a href="#" data-i18n="footer.company.contact">Contact</a></li>
+                            <li><a href="#" data-i18n="footer.company.partners">Partners</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p data-i18n="footer.copyright">&copy; 2025 REChain Network Solutions & Katya AI Systems. All rights reserved.</p>
+                <div class="footer-social">
+                    <a href="#" data-i18n="footer.social.twitter">Twitter</a>
+                    <a href="#" data-i18n="footer.social.linkedin">LinkedIn</a>
+                    <a href="#" data-i18n="footer.social.github">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="i18n.js"></script>
+</body>
+</html>

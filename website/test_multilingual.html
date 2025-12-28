@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIPlatform Multilingual Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .language-selector {
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>AIPlatform Multilingual Website Test</h1>
+    
+    <div class="test-container">
+        <h2>Language Switching Test</h2>
+        <div class="language-selector">
+            <label for="language-select">Select Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+                <option value="zh">中文</option>
+                <option value="ar">العربية</option>
+            </select>
+        </div>
+        <button onclick="runLanguageTest()">Run Language Test</button>
+        <div id="language-test-results"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Translation Verification</h2>
+        <button onclick="testTranslations()">Test All Translations</button>
+        <div id="translation-test-results"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>RTL Support Test</h2>
+        <button onclick="testRTL()">Test RTL Support</button>
+        <div id="rtl-test-results"></div>
+    </div>
+    
+    <script>
+        // Test functions
+        function runLanguageTest() {
+            const resultsDiv = document.getElementById('language-test-results');
+            resultsDiv.innerHTML = '';
+            
+            const languages = ['en', 'ru', 'zh', 'ar'];
+            let allPassed = true;
+            
+            languages.forEach(lang => {
+                try {
+                    // Test language change
+                    if (window.changeLanguage) {
+                        window.changeLanguage(lang);
+                        
+                        // Check if language was set
+                        const htmlLang = document.documentElement.getAttribute('lang');
+                        if (htmlLang === lang) {
+                            addResult(resultsDiv, `Language switch to ${lang}: SUCCESS`, 'success');
+                        } else {
+                            addResult(resultsDiv, `Language switch to ${lang}: FAILED (expected ${lang}, got ${htmlLang})`, 'error');
+                            allPassed = false;
+                        }
+                        
+                        // Check RTL for Arabic
+                        if (lang === 'ar') {
+                            const dir = document.documentElement.getAttribute('dir');
+                            if (dir === 'rtl') {
+                                addResult(resultsDiv, 'RTL support for Arabic: SUCCESS', 'success');
+                            } else {
+                                addResult(resultsDiv, `RTL support for Arabic: FAILED (expected rtl, got ${dir})`, 'error');
+                                allPassed = false;
+                            }
+                        }
+                    } else {
+                        addResult(resultsDiv, `Language function not available for ${lang}`, 'error');
+                        allPassed = false;
+                    }
+                } catch (e) {
+                    addResult(resultsDiv, `Error testing ${lang}: ${e.message}`, 'error');
+                    allPassed = false;
+                }
+            });
+            
+            addResult(resultsDiv, `Language test ${allPassed ? 'PASSED' : 'FAILED'}`, 
+                     allPassed ? 'success' : 'error');
+        }
+        
+        function testTranslations() {
+            const resultsDiv = document.getElementById('translation-test-results');
+            resultsDiv.innerHTML = '';
+            
+            const testKeys = [
+                'nav.home',
+                'hero.title',
+                'features.quantum.title',
+                'demo.download'
+            ];
+            
+            const languages = ['en', 'ru', 'zh', 'ar'];
+            let allPassed = true;
+            
+            languages.forEach(lang => {
+                try {
+                    if (window.getTranslation) {
+                        testKeys.forEach(key => {
+                            const translation = window.getTranslation(key, lang);
+                            if (translation && translation !== key) {
+                                addResult(resultsDiv, `${lang}.${key}: SUCCESS`, 'success');
+                            } else {
+                                addResult(resultsDiv, `${lang}.${key}: FAILED`, 'error');
+                                allPassed = false;
+                            }
+                        });
+                    } else {
+                        addResult(resultsDiv, `Translation function not available for ${lang}`, 'error');
+                        allPassed = false;
+                    }
+                } catch (e) {
+                    addResult(resultsDiv, `Error testing ${lang} translations: ${e.message}`, 'error');
+                    allPassed = false;
+                }
+            });
+            
+            addResult(resultsDiv, `Translation test ${allPassed ? 'PASSED' : 'FAILED'}`, 
+                     allPassed ? 'success' : 'error');
+        }
+        
+        function testRTL() {
+            const resultsDiv = document.getElementById('rtl-test-results');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // Test Arabic RTL
+                if (window.changeLanguage) {
+                    window.changeLanguage('ar');
+                    const dir = document.documentElement.getAttribute('dir');
+                    
+                    if (dir === 'rtl') {
+                        addResult(resultsDiv, 'Arabic RTL test: SUCCESS', 'success');
+                    } else {
+                        addResult(resultsDiv, `Arabic RTL test: FAILED (expected rtl, got ${dir})`, 'error');
+                    }
+                    
+                    // Test English LTR
+                    window.changeLanguage('en');
+                    const enDir = document.documentElement.getAttribute('dir');
+                    
+                    if (enDir !== 'rtl') {
+                        addResult(resultsDiv, 'English LTR test: SUCCESS', 'success');
+                    } else {
+                        addResult(resultsDiv, `English LTR test: FAILED (expected ltr, got ${enDir})`, 'error');
+                    }
+                } else {
+                    addResult(resultsDiv, 'RTL test: SKIPPED (no language function)', 'error');
+                }
+            } catch (e) {
+                addResult(resultsDiv, `RTL test error: ${e.message}`, 'error');
+            }
+        }
+        
+        function addResult(container, message, type) {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('language-select').addEventListener('change', function() {
+                if (window.changeLanguage) {
+                    window.changeLanguage(this.value);
+                }
+            });
+        });
+    </script>
+    <script src="i18n.js"></script>
+</body>
+</html>

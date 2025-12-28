@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "id": "item1",
+      "prompt": "Explain quantum computing",
+      "model": "gigachat3-702b",
+      "parameters": {
+        "max_tokens": 100
+      }
+    }
+  ]
+}

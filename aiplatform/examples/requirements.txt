@@ -1,0 +1,69 @@
+# AIPlatform SDK Examples Requirements
+# This file lists all dependencies needed to run the examples
+
+# Core dependencies (usually already installed with AIPlatform)
+numpy>=1.21.0
+typing-extensions>=3.7.4
+
+# Quantum computing dependencies
+qiskit>=0.44.0
+qiskit-aer>=0.12.0
+qiskit-ibm-runtime>=0.10.0
+
+# Computer vision dependencies (optional)
+opencv-python>=4.5.0
+Pillow>=8.0.0
+
+# Audio processing dependencies (optional)
+librosa>=0.9.0
+soundfile>=0.10.0
+
+# Web and networking dependencies
+requests>=2.25.0
+flask>=2.0.0
+websocket-client>=1.4.0
+
+# Data processing and analysis
+pandas>=1.3.0
+scikit-learn>=1.0.0
+scipy>=1.7.0
+
+# Testing dependencies
+pytest>=6.2.0
+pytest-cov>=2.12.0
+unittest2>=1.1.0
+
+# Development dependencies
+black>=21.0.0
+flake8>=3.9.0
+mypy>=0.910
+
+# Documentation dependencies
+sphinx>=4.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Platform-specific dependencies
+# For Linux systems
+psutil>=5.8.0
+
+# For Windows systems
+pywin32>=227; sys_platform == "win32"
+
+# For macOS systems
+pyobjc-framework-Cocoa>=7.0; sys_platform == "darwin"
+
+# Internationalization dependencies
+babel>=2.9.0
+python-gettext>=4.0
+
+# Security dependencies
+cryptography>=3.4.0
+pyjwt>=2.1.0
+
+# Performance optimization dependencies
+numba>=0.54.0
+cython>=0.29.0
+
+# Note: Some dependencies may be optional depending on which examples you want to run.
+# The core AIPlatform SDK should work without all of these dependencies,
+# but some examples may have reduced functionality.
