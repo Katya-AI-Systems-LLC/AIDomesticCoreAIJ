@@ -1,0 +1,203 @@
+{
+  "dashboard": {
+    "title": "Kubernetes Cluster Monitoring",
+    "uid": "k8s-cluster",
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Node Status",
+        "type": "stat",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "count(kube_node_status_condition{condition=\"Ready\",status=\"true\"})",
+            "legendFormat": "Ready Nodes",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Pod Status",
+        "type": "stat",
+        "gridPos": {
+          "x": 6,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "sum(kube_pod_status_phase{phase=\"Running\"})",
+            "legendFormat": "Running Pods",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Failed Pods",
+        "type": "stat",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "sum(kube_pod_status_phase{phase=\"Failed\"})",
+            "legendFormat": "Failed Pods",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Node CPU Usage",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "(1 - avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (kubernetes_node)) * 100",
+            "legendFormat": "{{ kubernetes_node }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "CPU Usage %"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Node Memory Usage",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 4,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "{{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Memory Usage %"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Pod CPU Usage by Namespace",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 12,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total[5m])) by (namespace)",
+            "legendFormat": "{{ namespace }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "CPU cores"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Pod Memory Usage by Namespace",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 12,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(container_memory_usage_bytes) by (namespace)",
+            "legendFormat": "{{ namespace }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "bytes",
+            "label": "Memory"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Pod Restart Count",
+        "type": "table",
+        "gridPos": {
+          "x": 0,
+          "y": 20,
+          "w": 24,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "topk(10, sum by (pod_name, namespace) (rate(kube_pod_container_status_restarts_total[1h])))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "PVC Usage",
+        "type": "table",
+        "gridPos": {
+          "x": 0,
+          "y": 28,
+          "w": 24,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes",
+            "legendFormat": "{{ persistentvolumeclaim }}",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+}

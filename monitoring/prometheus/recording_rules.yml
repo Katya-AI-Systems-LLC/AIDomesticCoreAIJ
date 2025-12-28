@@ -1,0 +1,169 @@
+# Prometheus Recording Rules
+# Pre-calculated metrics for dashboards and alerting
+
+groups:
+  - name: api_metrics
+    interval: 30s
+    rules:
+      - record: api:request_rate:1m
+        expr: rate(http_requests_total[1m])
+
+      - record: api:request_rate:5m
+        expr: rate(http_requests_total[5m])
+
+      - record: api:error_rate:1m
+        expr: rate(http_requests_total{status=~"5.."}[1m])
+
+      - record: api:error_rate:5m
+        expr: rate(http_requests_total{status=~"5.."}[5m])
+
+      - record: api:latency:p50:1m
+        expr: histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[1m]))
+
+      - record: api:latency:p95:1m
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[1m]))
+
+      - record: api:latency:p99:1m
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))
+
+  - name: database_metrics
+    interval: 30s
+    rules:
+      - record: pg:connections:ratio
+        expr: pg_stat_activity_count / pg_settings_max_connections
+
+      - record: pg:query_duration:avg:1m
+        expr: rate(pg_stat_statements_sum_exec_time[1m]) / rate(pg_stat_statements_calls[1m])
+
+      - record: pg:cache_hit_ratio
+        expr: sum(rate(pg_stat_user_tables_idx_scan[1m])) / sum(rate(pg_stat_user_tables_seq_scan[1m]) + rate(pg_stat_user_tables_idx_scan[1m]))
+
+      - record: pg:replication_lag:seconds
+        expr: pg_replication_lag / 1000
+
+      - record: pg:transaction_duration:max:1m
+        expr: max(pg_stat_activity_max_tx_duration)
+
+  - name: cache_metrics
+    interval: 30s
+    rules:
+      - record: redis:memory:usage:ratio
+        expr: redis_memory_used_bytes / redis_memory_max_bytes
+
+      - record: redis:hit_rate:1m
+        expr: rate(redis_keyspace_hits_total[1m]) / (rate(redis_keyspace_hits_total[1m]) + rate(redis_keyspace_misses_total[1m]))
+
+      - record: redis:eviction_rate:1m
+        expr: rate(redis_evicted_keys_total[1m])
+
+      - record: redis:connected_clients:ratio
+        expr: redis_connected_clients / redis_config_maxclients
+
+      - record: redis:command_latency:p99:1m
+        expr: histogram_quantile(0.99, rate(redis_command_duration_seconds_bucket[1m]))
+
+  - name: kubernetes_metrics
+    interval: 30s
+    rules:
+      - record: k8s:node:cpu:usage:percentage
+        expr: (1 - avg(irate(node_cpu_seconds_total{mode="idle"}[5m])) by (kubernetes_node)) * 100
+
+      - record: k8s:node:memory:usage:percentage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+
+      - record: k8s:pod:cpu:usage:ratio
+        expr: sum(rate(container_cpu_usage_seconds_total[1m])) by (pod_name, namespace) / sum(container_spec_cpu_quota / container_spec_cpu_period) by (pod_name, namespace)
+
+      - record: k8s:pod:memory:usage:ratio
+        expr: sum(container_memory_usage_bytes) by (pod_name, namespace) / sum(container_spec_memory_limit_bytes) by (pod_name, namespace)
+
+      - record: k8s:pvc:usage:ratio
+        expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes
+
+  - name: host_metrics
+    interval: 30s
+    rules:
+      - record: host:cpu:usage:percentage
+        expr: (100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100))
+
+      - record: host:memory:available:percentage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+
+      - record: host:disk:usage:percentage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100
+
+      - record: host:network:bytes:in:1m
+        expr: rate(node_network_receive_bytes_total[1m])
+
+      - record: host:network:bytes:out:1m
+        expr: rate(node_network_transmit_bytes_total[1m])
+
+      - record: host:load:average:1m
+        expr: node_load1
+
+      - record: host:load:average:5m
+        expr: node_load5
+
+      - record: host:load:average:15m
+        expr: node_load15
+
+  - name: service_level_indicators
+    interval: 30s
+    rules:
+      - record: sli:api:availability:5m
+        expr: (1 - (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]))) * 100
+
+      - record: sli:api:latency:p99:5m
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) <= 1
+
+      - record: sli:database:availability:5m
+        expr: (1 - rate(pg_up == 0[5m])) * 100
+
+      - record: sli:cache:availability:5m
+        expr: (1 - rate(redis_up == 0[5m])) * 100
+
+      - record: slo:api:error_budget:monthly
+        expr: |
+          (1 - (sum(rate(http_requests_total{status=~"5.."}[30d])) / sum(rate(http_requests_total[30d])))) * 100
+
+  - name: aggregation_rules
+    interval: 1m
+    rules:
+      - record: api:requests:per_endpoint:1m
+        expr: sum by (endpoint) (rate(http_requests_total[1m]))
+
+      - record: api:errors:per_endpoint:1m
+        expr: sum by (endpoint, status) (rate(http_requests_total{status=~"5.."}[1m]))
+
+      - record: api:latency:per_endpoint:p95:1m
+        expr: histogram_quantile(0.95, sum by (endpoint, le) (rate(http_request_duration_seconds_bucket[1m])))
+
+      - record: k8s:pods:running:by_namespace
+        expr: sum by (namespace) (kube_pod_status_phase{phase="Running"})
+
+      - record: k8s:pods:failed:by_namespace
+        expr: sum by (namespace) (kube_pod_status_phase{phase="Failed"})
+
+      - record: container:memory:top10
+        expr: topk(10, sum by (pod_name, namespace) (container_memory_usage_bytes))
+
+      - record: container:cpu:top10
+        expr: topk(10, sum by (pod_name, namespace) (rate(container_cpu_usage_seconds_total[5m])))
+
+  - name: business_metrics
+    interval: 30s
+    rules:
+      - record: business:requests:per_minute
+        expr: rate(http_requests_total[1m]) * 60
+
+      - record: business:successful_requests:per_minute
+        expr: rate(http_requests_total{status=~"2.."}[1m]) * 60
+
+      - record: business:failed_requests:per_minute
+        expr: rate(http_requests_total{status=~"[45].."}[1m]) * 60
+
+      - record: business:api:uptime:percentage
+        expr: (sum(up{job="aiplatform-api"}) / count(up{job="aiplatform-api"})) * 100
+
+      - record: business:average:response:time:ms
+        expr: (histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m])) * 1000)

@@ -1,0 +1,264 @@
+version: '3.9'
+
+services:
+  aiplatform-api:
+    image: aiplatform/sdk:1.0.0
+    container_name: aiplatform-api
+    command: python -m uvicorn aiplatform.cli:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - WORKERS=4
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/aiplatform
+      - REDIS_URL=redis://:redis_password@redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key}
+      - API_KEY=${API_KEY:-your-api-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/etc/aiplatform:ro
+      - ./logs:/var/log/aiplatform
+      - ./data:/data
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      mode: replicated
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  aiplatform-mesh-worker:
+    image: aiplatform/sdk:1.0.0
+    container_name: aiplatform-mesh-worker
+    command: python -m aiplatform.mesh_ide
+    environment:
+      - MESH_MODE=worker
+      - MESH_COORDINATOR_URL=aiplatform-api:8000
+      - REDIS_URL=redis://:redis_password@redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/aiplatform
+    depends_on:
+      - aiplatform-api
+      - redis
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 5
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  aiplatform-quantum-worker:
+    image: aiplatform/sdk:1.0.0
+    container_name: aiplatform-quantum-worker
+    command: python -m aiplatform.quantum
+    environment:
+      - QUANTUM_BACKEND=qiskit
+      - QUANTUM_SIMULATOR=qasm_simulator
+      - REDIS_URL=redis://:redis_password@redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  aiplatform-3d-renderer:
+    image: aiplatform/sdk:1.0.0
+    container_name: aiplatform-3d-renderer
+    command: python -m aiplatform.vision
+    ports:
+      - "9000:9000"
+    environment:
+      - WEBGL_MODE=server
+      - RENDER_WORKERS=4
+      - REDIS_URL=redis://:redis_password@redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  nginx-lb:
+    image: nginx:1.25-alpine
+    container_name: aiplatform-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - aiplatform-api
+      - aiplatform-3d-renderer
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: aiplatform-postgres
+    environment:
+      POSTGRES_DB: aiplatform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: aiplatform-redis
+    command: redis-server --appendonly yes --requirepass redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: aiplatform-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    depends_on:
+      - aiplatform-api
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: aiplatform-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  loki:
+    image: grafana/loki:latest
+    container_name: aiplatform-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - aiplatform
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+
+networks:
+  aiplatform:
+    driver: overlay
+    driver_opts:
+      com.docker.network.driver.overlay.bind_interface: eth0
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local

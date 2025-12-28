@@ -1,0 +1,345 @@
+# Prometheus Alert Rules
+# Alerts for API, Database, Cache, Kubernetes, and Infrastructure
+
+groups:
+  - name: aiplatform_api
+    interval: 30s
+    rules:
+      - alert: APIHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate detected in API (>5%)"
+          description: "API error rate is {{ $value | humanizePercentage }} for instance {{ $labels.instance }}"
+          dashboard: "http://grafana:3000/d/api-metrics"
+
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High API latency detected (>1s)"
+          description: "P95 latency is {{ $value }}s for instance {{ $labels.instance }}"
+
+      - alert: APIContainerDown
+        expr: up{job="aiplatform-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "API container is down"
+          description: "API container on {{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: APIMemoryUsageHigh
+        expr: container_memory_usage_bytes{pod=~"aiplatform-api.*"} / container_spec_memory_limit_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage in API pod"
+          description: "Memory usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod_name }}"
+
+      - alert: APICPUUsageHigh
+        expr: rate(container_cpu_usage_seconds_total{pod=~"aiplatform-api.*"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage in API pod"
+          description: "CPU usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod_name }}"
+
+  - name: database
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL on {{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "High number of database connections"
+          description: "Database has {{ $value }} active connections (threshold: 80)"
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_statements_mean_exec_time[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Slow queries detected"
+          description: "Average query time is {{ $value }}ms (threshold: 1000ms)"
+
+      - alert: PostgreSQLTableBloat
+        expr: pg_table_bloat_ratio > 0.5
+        for: 1h
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Table bloat detected"
+          description: "Table {{ $labels.table_name }} has {{ $value | humanizePercentage }} bloat"
+
+      - alert: PostgreSQLDiskUsageHigh
+        expr: pg_database_size_bytes / 1024 / 1024 / 1024 > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "Database disk usage is high (>90GB)"
+          description: "Database size is {{ $value }}GB"
+
+  - name: cache
+    interval: 30s
+    rules:
+      - alert: RedisDown
+        expr: up{job="redis-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis on {{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: RedisHighEvictions
+        expr: rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High key evictions from Redis"
+          description: "Redis is evicting {{ $value }} keys per second"
+
+      - alert: RedisMasterDown
+        expr: redis_replication_role == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Redis master is down"
+          description: "Redis master on {{ $labels.instance }} is no longer accessible"
+
+  - name: kubernetes
+    interval: 30s
+    rules:
+      - alert: KubernetesNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Kubernetes node not ready"
+          description: "Node {{ $labels.node }} is not in Ready state"
+
+      - alert: KubernetesMemoryPressure
+        expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Kubernetes node memory pressure"
+          description: "Node {{ $labels.node }} is experiencing memory pressure"
+
+      - alert: KubernetesDiskPressure
+        expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Kubernetes node disk pressure"
+          description: "Node {{ $labels.node }} is experiencing disk pressure"
+
+      - alert: KubernetesPodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Kubernetes pod crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash looping"
+
+      - alert: KubernetesPodNotHealthy
+        expr: min_over_time(sum by(namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed"})[15m:1m]) > 0
+        for: 15m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Kubernetes pod not healthy"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is not healthy"
+
+      - alert: KubernetesContainerOomKiller
+        expr: kube_pod_container_status_terminated_reason{reason="OOMKilled"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Kubernetes container OOM killed"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} was OOM killed"
+
+      - alert: KubernetesPersistentVolumeFull
+        expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Kubernetes persistent volume full"
+          description: "PV {{ $labels.persistentvolumeclaim }} is {{ $value | humanizePercentage }} full"
+
+  - name: infrastructure
+    interval: 30s
+    rules:
+      - alert: HostHighCPU
+        expr: (100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Host high CPU usage"
+          description: "CPU usage on {{ $labels.instance }} is {{ $value }}%"
+
+      - alert: HostHighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Host high memory usage"
+          description: "Memory usage on {{ $labels.instance }} is {{ $value }}%"
+
+      - alert: HostHighDiskUsage
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lowerdir|squashfs"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Host high disk usage"
+          description: "Disk usage on {{ $labels.instance }} is {{ $value | humanizePercentage }} full"
+
+      - alert: HostHighLoadAverage
+        expr: node_load15 > on(instance) group_left count(node_cpu_seconds_total{mode="system"})
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Host high load average"
+          description: "Load average on {{ $labels.instance }} is {{ $value }}"
+
+      - alert: HostNetworkReceiveErrors
+        expr: rate(node_network_receive_errs_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Host network receive errors"
+          description: "Network errors on {{ $labels.instance }} - {{ $labels.device }}"
+
+  - name: networking
+    interval: 30s
+    rules:
+      - alert: IngressHighErrorRate
+        expr: rate(nginx_ingress_controller_requests{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Ingress controller high error rate"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+
+      - alert: IngressLatencyHigh
+        expr: histogram_quantile(0.95, rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Ingress latency is high"
+          description: "P95 latency is {{ $value }}s"
+
+      - alert: CertificateExpiringSoon
+        expr: certmanager_certificate_expiration_timestamp_seconds - time() < 7 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "Certificate {{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+
+  - name: application
+    interval: 30s
+    rules:
+      - alert: QuantumOptimizerLatency
+        expr: histogram_quantile(0.99, rate(quantum_optimizer_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: quantum
+        annotations:
+          summary: "Quantum optimizer latency high"
+          description: "P99 latency is {{ $value }}s"
+
+      - alert: VisionModelInferenceFailure
+        expr: rate(vision_model_inference_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          team: vision
+        annotations:
+          summary: "Vision model inference failures"
+          description: "Failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: FederatedTrainingStalled
+        expr: rate(federated_training_iterations_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "Federated training appears stalled"
+          description: "No training iterations in the last 10 minutes"

@@ -1,0 +1,68 @@
+# Grafana Provisioning - Data Sources Configuration
+
+apiVersion: 1
+
+datasources:
+  # Prometheus Data Source
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 30s
+      queryTimeout: 60s
+      tlsSkipVerify: false
+    version: 1
+
+  # Elasticsearch Data Source for Logs
+  - name: Elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "aiplatform-logs-*"
+    jsonData:
+      esVersion: "8.0.0"
+      timeField: "@timestamp"
+      logMessageField: "message"
+      logLevelField: "level"
+      tlsSkipVerify: false
+      authentication: basic
+      basicAuthUser: elastic
+    secureJsonData:
+      basicAuthPassword: changeme
+    version: 1
+
+  # InfluxDB Data Source (Optional)
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      dbName: aiplatform
+      tlsSkipVerify: false
+    version: 1
+
+  # CloudWatch (if using AWS)
+  - name: CloudWatch
+    type: cloudwatch
+    jsonData:
+      authType: arn
+      assumeRoleArn: arn:aws:iam::123456789012:role/GrafanaRole
+      defaultRegion: us-east-1
+    version: 1
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'AI Platform'
+        orgId: 1
+        folder: 'AI Platform'
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards

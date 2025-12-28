@@ -1,0 +1,103 @@
+---
+# AI Platform SDK - Kubernetes Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aiplatform
+  labels:
+    name: aiplatform
+    environment: production
+  annotations:
+    description: "AI Platform SDK - Quantum-Enabled Distributed Computing Platform"
+    version: "1.0.0"
+    managed-by: "terraform"
+
+---
+# Network Policy - Restrict ingress/egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aiplatform-network-policy
+  namespace: aiplatform
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: aiplatform
+    - podSelector:
+        matchLabels:
+          app: aiplatform
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - podSelector: {}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# Resource Quota for namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: aiplatform-quota
+  namespace: aiplatform
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: "200Gi"
+    limits.cpu: "200"
+    limits.memory: "400Gi"
+    pods: "500"
+    services: "50"
+    persistentvolumeclaims: "20"
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: ["high", "medium"]
+
+---
+# Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: aiplatform-limits
+  namespace: aiplatform
+spec:
+  limits:
+  - max:
+      cpu: "4"
+      memory: "8Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "256Mi"
+    type: Container
+  - max:
+      cpu: "8"
+      memory: "16Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Pod

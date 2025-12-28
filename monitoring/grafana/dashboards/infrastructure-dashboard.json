@@ -1,0 +1,230 @@
+{
+  "dashboard": {
+    "title": "Infrastructure & Resources",
+    "uid": "infrastructure",
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Host CPU Usage by Instance",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "(100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
+            "legendFormat": "{{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "CPU Usage %"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Host Memory Usage by Instance",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "{{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Memory Usage %"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Disk Usage by Filesystem",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "(1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|fuse.lowerdir|squashfs\"} / node_filesystem_size_bytes)) * 100",
+            "legendFormat": "{{ device }} - {{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Disk Usage %"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Load Average",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "node_load1",
+            "legendFormat": "1min - {{ instance }}",
+            "refId": "A"
+          },
+          {
+            "expr": "node_load5",
+            "legendFormat": "5min - {{ instance }}",
+            "refId": "B"
+          },
+          {
+            "expr": "node_load15",
+            "legendFormat": "15min - {{ instance }}",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Load Average"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Network Bytes Received",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
+            "legendFormat": "{{ instance }} - {{ device }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "Bps",
+            "label": "Bytes/sec"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Network Bytes Transmitted",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
+            "legendFormat": "{{ instance }} - {{ device }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "Bps",
+            "label": "Bytes/sec"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "PostgreSQL Connection Pool",
+        "type": "stat",
+        "gridPos": {
+          "x": 0,
+          "y": 24,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Redis Memory Usage",
+        "type": "gauge",
+        "gridPos": {
+          "x": 8,
+          "y": 24,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "(redis_memory_used_bytes / redis_memory_max_bytes) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "max": 100,
+            "min": 0,
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Top 10 Processes by Memory",
+        "type": "table",
+        "gridPos": {
+          "x": 16,
+          "y": 24,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "topk(10, process_resident_memory_bytes)",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+}

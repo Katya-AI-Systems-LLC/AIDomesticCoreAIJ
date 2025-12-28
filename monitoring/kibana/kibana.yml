@@ -1,0 +1,161 @@
+# Kibana Configuration
+
+# Server configuration
+server.port: 5601
+server.host: "0.0.0.0"
+server.maxPayload: 1048576
+
+# Elasticsearch configuration
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.username: elastic
+elasticsearch.password: changeme
+elasticsearch.ssl.verificationMode: none
+
+# Logging
+logging.level: info
+logging.json: true
+
+# Session settings
+xpack.security.session.idleTimeout: "1h"
+xpack.security.session.lifespan: "30d"
+
+# Kibana index
+kibana.defaultAppId: "home"
+kibana.index: ".kibana"
+
+# Default time zone
+dateFormat.tz: "UTC"
+
+# Saved objects settings
+savedObjects.maxImportPayloadBytes: 26214400
+
+# Data views (index patterns)
+dataViews.defaultIndex: "aiplatform-logs-*"
+dataViews.hideSystemAndGlobalDataviews: false
+
+# Alerts configuration
+alerting.enabled: true
+
+# Advanced settings
+savedObjects.management.defaultSize: 50
+
+# XSRF protection
+server.xsrf.disableProtection: false
+
+# Monitoring
+monitoring.enabled: true
+monitoring.kibana.collection.enabled: true
+monitoring.ui.container.elasticsearch.enabled: true
+
+# Canvas
+canvas.enabled: true
+
+# Reporting
+xpack.reporting.enabled: true
+xpack.reporting.roles.enabled: true
+xpack.reporting.csv.maxSizeBytes: 104857600
+
+# ML Integration
+ml.enabled: true
+
+# APM Integration
+xpack.apm.ui.enabled: true
+
+# Discover settings
+discover.defaultColumns: ["_source"]
+discover.maxDocTableRows: 250
+
+# Dev tools
+dev_tools.enabled: true
+dev_tools.request_timeout: "30s"
+
+# Feature flags
+features.dashboardMode.enabled: true
+features.discover.enabled: true
+features.canvas.enabled: true
+features.reporting.enabled: true
+features.alerting.enabled: true
+features.apm.enabled: true
+features.uptime.enabled: true
+features.logs.enabled: true
+features.infrastructure.enabled: true
+features.fleet.enabled: true
+features.spaces.enabled: true
+features.userProfiles.enabled: true
+
+# Spaces
+spaces.enabled: true
+spaces.spacesAvailableInFreeTrial: true
+
+# Security
+xpack.security.enabled: true
+xpack.security.showInsecureClusterWarning: true
+
+# Telemetry
+telemetry.enabled: true
+telemetry.sendUsageFrom: "server"
+
+# UI Metrics
+uiMetrics.enabled: true
+
+# Dashboard
+dashboard.defaultViewMode: edit
+dashboard.showWriteControls: true
+
+# Visualization
+visualization.visualize.legacyChartsLibrary: false
+
+# Timepicker
+timepicker.quickRanges:
+  - from: now/d
+    to: now/d
+    display: Today
+  - from: now/w
+    to: now/w
+    display: This week
+  - from: now/M
+    to: now/M
+    display: This month
+  - from: now/y
+    to: now/y
+    display: This year
+  - from: now-15m
+    to: now
+    display: Last 15 minutes
+  - from: now-1h
+    to: now
+    display: Last 1 hour
+  - from: now-24h
+    to: now
+    display: Last 24 hours
+  - from: now-7d
+    to: now
+    display: Last 7 days
+  - from: now-30d
+    to: now
+    display: Last 30 days
+  - from: now-90d
+    to: now
+    display: Last 90 days
+  - from: now-1y
+    to: now
+    display: Last 1 year
+
+timepicker.timeDefaults:
+  from: now-15m
+  to: now
+
+# Index patterns
+indexPattern:
+  fieldMapping.lookupLimit: 200
+
+# Environment variables
+# ELASTICSEARCH_HOSTS - Elasticsearch hosts (default: http://elasticsearch:9200)
+# ELASTICSEARCH_USERNAME - Elasticsearch username (default: elastic)
+# ELASTICSEARCH_PASSWORD - Elasticsearch password
+# KIBANA_DEFAULTAPPID - Default app ID (default: home)
+# KIBANA_INDEX - Kibana index name (default: .kibana)
+# SERVER_PORT - Server port (default: 5601)
+# SERVER_HOST - Server host (default: 0.0.0.0)
+# XPACK_SECURITY_ENABLED - Enable security (default: true)
+# MONITORING_ENABLED - Enable monitoring (default: true)

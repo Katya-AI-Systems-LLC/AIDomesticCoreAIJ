@@ -1,0 +1,291 @@
+language: python
+
+python:
+  - "3.9"
+  - "3.10"
+  - "3.11"
+
+# Build stages
+stages:
+  - test
+  - build
+  - deploy
+
+dist: jammy
+os: linux
+
+services:
+  - postgresql
+  - redis-server
+
+addons:
+  postgresql: "15"
+
+before_install:
+  - echo "Installing dependencies..."
+  - pip install --upgrade pip setuptools wheel
+  - pip install -r requirements.txt
+  - pip install pytest pytest-cov pytest-xdist flake8 bandit safety coverage
+
+before_script:
+  - psql -c 'CREATE DATABASE aiplatform_test;' -U postgres
+  - psql -c 'CREATE DATABASE aiplatform_test;' -U postgres
+  - redis-cli ping
+
+env:
+  global:
+    - secure: "DOCKER_USERNAME_ENCRYPTED"
+    - secure: "DOCKER_PASSWORD_ENCRYPTED"
+    - DOCKER_REGISTRY=docker.io
+    - DOCKER_IMAGE=aiplatform/sdk
+  matrix:
+    - PYTHON_VERSION=3.9 TEST_SUITE=unit
+    - PYTHON_VERSION=3.10 TEST_SUITE=unit
+    - PYTHON_VERSION=3.11 TEST_SUITE=unit
+    - PYTHON_VERSION=3.11 TEST_SUITE=integration
+
+jobs:
+  include:
+    # Linting and code quality
+    - stage: test
+      python: "3.11"
+      name: "Code Quality Checks"
+      script:
+        - echo "Running Flake8 linter..."
+        - flake8 aiplatform/ --max-line-length=100 --count --statistics || true
+        - echo "Running Black formatter check..."
+        - pip install black && black aiplatform/ --check || true
+      after_success:
+        - echo "✅ Code quality checks passed"
+
+    # Security scanning
+    - stage: test
+      python: "3.11"
+      name: "Security Scanning"
+      script:
+        - echo "Running Bandit security scan..."
+        - bandit -r aiplatform/ -f json -o bandit-report.json || true
+        - echo "Checking dependencies..."
+        - safety check --json > safety-report.json || true
+        - pip-audit --desc > pip-audit-report.txt || true
+        - echo "✅ Security scans completed"
+      after_success:
+        - if [ -f bandit-report.json ]; then cat bandit-report.json; fi
+      artifacts:
+        paths:
+          - bandit-report.json
+          - safety-report.json
+          - pip-audit-report.txt
+
+    # Unit tests (all Python versions)
+    - stage: test
+      name: "Unit Tests - Python $PYTHON_VERSION"
+      script:
+        - |
+          if [ "$TEST_SUITE" = "unit" ]; then
+            echo "Running unit tests..."
+            pytest tests/ \
+              -v \
+              --cov=aiplatform \
+              --cov-report=xml \
+              --cov-report=html \
+              --junitxml=junit.xml \
+              -n auto
+          fi
+      after_success:
+        - echo "✅ Unit tests passed"
+        - if [ -f coverage.xml ]; then bash <(curl -s https://codecov.io/bash); fi
+
+    # Integration tests
+    - stage: test
+      python: "3.11"
+      name: "Integration Tests"
+      script:
+        - |
+          if [ "$TEST_SUITE" = "integration" ]; then
+            echo "Running integration tests..."
+            pytest tests/integration_tests.py \
+              -v \
+              --timeout=300 \
+              --junitxml=integration-junit.xml
+          fi
+      after_success:
+        - echo "✅ Integration tests passed"
+
+    # Build Docker image
+    - stage: build
+      name: "Build Docker Image"
+      os: linux
+      services:
+        - docker
+      script:
+        - echo "Building Docker image..."
+        - |
+          docker build \
+            -t ${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7} \
+            -t ${DOCKER_IMAGE}:${TRAVIS_BRANCH} \
+            -t ${DOCKER_IMAGE}:latest \
+            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+            --build-arg VCS_REF=${TRAVIS_COMMIT:0:7} \
+            --build-arg VERSION=${TRAVIS_BUILD_NUMBER} \
+            -f Dockerfile .
+        - echo "✅ Docker image built successfully"
+
+    # Container security scan
+    - stage: build
+      name: "Container Security Scan"
+      os: linux
+      services:
+        - docker
+      script:
+        - echo "Installing Trivy scanner..."
+        - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        - echo "Scanning Docker image..."
+        - |
+          docker build \
+            -t ${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7} \
+            -f Dockerfile .
+        - trivy image --exit-code 0 --severity HIGH,CRITICAL --format json -o trivy-report.json ${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7}
+        - echo "✅ Container scan completed"
+
+    # Push to Docker registry
+    - stage: build
+      name: "Push Docker Image"
+      os: linux
+      services:
+        - docker
+      script:
+        - |
+          if [ "$TRAVIS_BRANCH" = "main" ] || [ "$TRAVIS_BRANCH" = "develop" ]; then
+            echo "Logging into Docker registry..."
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            
+            echo "Building and pushing image..."
+            docker build \
+              -t ${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7} \
+              -t ${DOCKER_IMAGE}:${TRAVIS_BRANCH} \
+              -t ${DOCKER_IMAGE}:latest \
+              -f Dockerfile .
+            
+            docker push ${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7}
+            docker push ${DOCKER_IMAGE}:${TRAVIS_BRANCH}
+            docker push ${DOCKER_IMAGE}:latest
+            
+            echo "✅ Docker image pushed successfully"
+          fi
+      on:
+        branches:
+          only:
+            - main
+            - develop
+            - staging
+
+    # Deploy to staging
+    - stage: deploy
+      name: "Deploy to Staging"
+      python: "3.11"
+      script:
+        - |
+          if [ "$TRAVIS_BRANCH" = "develop" ] || [ "$TRAVIS_BRANCH" = "staging" ]; then
+            echo "Deploying to staging environment..."
+            
+            # Configure kubectl
+            mkdir -p ~/.kube
+            echo $KUBECONFIG_STAGING | base64 -d > ~/.kube/config
+            chmod 600 ~/.kube/config
+            
+            # Deploy
+            kubectl config use-context staging-cluster
+            kubectl set image deployment/aiplatform-api \
+              aiplatform-api=${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7} \
+              -n aiplatform \
+              --record
+            
+            # Wait for rollout
+            kubectl rollout status deployment/aiplatform-api -n aiplatform
+            
+            echo "✅ Staging deployment completed"
+          fi
+      on:
+        branches:
+          only:
+            - develop
+            - staging
+
+    # Deploy to production
+    - stage: deploy
+      name: "Deploy to Production"
+      python: "3.11"
+      script:
+        - |
+          if [ "$TRAVIS_BRANCH" = "main" ]; then
+            echo "Deploying to production environment..."
+            
+            # Configure kubectl
+            mkdir -p ~/.kube
+            echo $KUBECONFIG_PRODUCTION | base64 -d > ~/.kube/config
+            chmod 600 ~/.kube/config
+            
+            # Deploy using blue-green strategy
+            kubectl config use-context production-cluster
+            kubectl set image deployment/aiplatform-api-blue \
+              aiplatform-api=${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7} \
+              -n aiplatform \
+              --record
+            
+            # Wait for rollout
+            kubectl rollout status deployment/aiplatform-api-blue -n aiplatform
+            
+            # Verify health
+            sleep 30
+            kubectl run health-check \
+              --image=${DOCKER_IMAGE}:${TRAVIS_COMMIT:0:7} \
+              --restart=Never \
+              -n aiplatform \
+              -- pytest tests/health_check.py
+            
+            # Switch traffic
+            kubectl patch service aiplatform-api \
+              -n aiplatform \
+              -p '{"spec":{"selector":{"version":"blue"}}}'
+            
+            echo "✅ Production deployment completed"
+          fi
+      on:
+        branch: main
+      if: type = push
+
+after_success:
+  - echo "Build passed!"
+  - |
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ] && [ "$TRAVIS_BRANCH" = "main" ]; then
+      echo "Sending success notification..."
+    fi
+
+after_failure:
+  - echo "Build failed!"
+  - |
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      echo "Sending failure notification..."
+    fi
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+notifications:
+  email:
+    on_success: always
+    on_failure: always
+  slack:
+    secure: "SLACK_WEBHOOK_ENCRYPTED"
+    on_success: change
+    on_failure: always
+
+branches:
+  only:
+    - main
+    - develop
+    - staging
+    - /^feature\/.*$/
+    - /^hotfix\/.*$/

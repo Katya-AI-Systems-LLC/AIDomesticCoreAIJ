@@ -1,0 +1,180 @@
+# Alertmanager Configuration
+# Handles alert routing, grouping, and notifications
+
+global:
+  resolve_timeout: 5m
+  # Slack webhook URL
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  # PagerDuty key
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+  # Opsgenie key
+  opsgenie_api_key: '${OPSGENIE_API_KEY}'
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Alert routing tree
+route:
+  # Default receiver
+  receiver: 'default'
+  
+  # Wait time before sending
+  group_wait: 10s
+  
+  # Re-send unchanged alerts after this time
+  group_interval: 10m
+  
+  # Wait before sending repeat notifications
+  repeat_interval: 12h
+  
+  # Route rules based on labels
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 0s
+      repeat_interval: 5m
+      continue: true
+
+    # API alerts
+    - match_re:
+        alertname: 'API.*'
+      receiver: 'api-team'
+      group_by: ['alertname', 'instance']
+      continue: true
+
+    # Database alerts
+    - match_re:
+        alertname: 'PostgreSQL.*'
+      receiver: 'database-team'
+      group_by: ['alertname']
+      continue: true
+
+    # Kubernetes alerts
+    - match_re:
+        alertname: 'Kubernetes.*'
+      receiver: 'platform-team'
+      group_by: ['alertname', 'node']
+      continue: true
+
+    # Infrastructure alerts
+    - match_re:
+        alertname: 'Host.*'
+      receiver: 'infrastructure-team'
+      group_by: ['alertname', 'instance']
+      continue: true
+
+    # Inhibition rules
+    - match:
+        severity: warning
+      receiver: 'warnings'
+      group_wait: 30s
+      repeat_interval: 1h
+
+# Receivers configuration
+receivers:
+  # Default receiver
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+  # Critical alerts - immediate notification
+  - name: 'critical'
+    slack_configs:
+      - channel: '#critical-alerts'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: 'danger'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}'
+        details:
+          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+    opsgenie_configs:
+      - api_key: '${OPSGENIE_API_KEY}'
+        priority: 'P1'
+        description: '{{ .GroupLabels.alertname }}: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+  # API team notifications
+  - name: 'api-team'
+    slack_configs:
+      - channel: '#api-alerts'
+        title: 'API Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+    email_configs:
+      - to: 'api-team@example.com'
+        from: 'alertmanager@example.com'
+        smarthost: 'smtp.example.com:587'
+        auth_username: '${SMTP_USER}'
+        auth_password: '${SMTP_PASSWORD}'
+        require_tls: true
+        headers:
+          Subject: 'API Alert: {{ .GroupLabels.alertname }}'
+
+  # Database team notifications
+  - name: 'database-team'
+    slack_configs:
+      - channel: '#database-alerts'
+        title: 'Database Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+    opsgenie_configs:
+      - api_key: '${OPSGENIE_API_KEY}'
+        priority: 'P2'
+        description: '{{ .GroupLabels.alertname }}'
+
+  # Platform team notifications
+  - name: 'platform-team'
+    slack_configs:
+      - channel: '#platform-alerts'
+        title: 'Platform Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Infrastructure team notifications
+  - name: 'infrastructure-team'
+    slack_configs:
+      - channel: '#infrastructure-alerts'
+        title: 'Infrastructure Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Warning notifications
+  - name: 'warnings'
+    slack_configs:
+      - channel: '#warnings'
+        title: '⚠️  Warning: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: 'warning'
+
+# Inhibition rules - suppress certain alerts
+inhibit_rules:
+  # Don't send warning if critical is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance', 'pod']
+
+  # Don't send low priority alerts during maintenance
+  - source_match:
+      alertname: 'Maintenance'
+    target_match_re:
+      severity: 'warning|info'
+    equal: ['instance']
+
+  # Don't send pod alerts if node is down
+  - source_match:
+      alertname: 'KubernetesNodeNotReady'
+    target_match_re:
+      alertname: 'Kubernetes.*'
+    equal: ['node']

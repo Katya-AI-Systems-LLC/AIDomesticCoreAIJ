@@ -1,0 +1,64 @@
+# Logstash Main Configuration
+
+# Pipeline configuration
+pipeline.id: aiplatform-main
+pipeline.workers: ${PIPELINE_WORKERS:4}
+pipeline.batch.size: ${BATCH_SIZE:1000}
+pipeline.batch.delay: ${BATCH_DELAY:50}
+
+# Queue settings
+queue.type: memory
+queue.max_bytes: 1gb
+
+# Performance tuning
+pipeline.unsafe_shutdown: false
+
+# HTTP API
+api.http.host: "0.0.0.0"
+api.http.port: 9600
+
+# Logging
+log.level: info
+log.format: json
+
+# Monitoring
+xpack.monitoring.enabled: true
+xpack.monitoring.elasticsearch.hosts: ["${ELASTICSEARCH_HOSTS:elasticsearch:9200}"]
+xpack.monitoring.elasticsearch.username: elastic
+xpack.monitoring.elasticsearch.password: ${ELASTICSEARCH_PASSWORD:changeme}
+
+# Dead Letter Queue (for debugging)
+dead_letter_queue.enable: false
+dead_letter_queue.max_bytes: 1024mb
+path.dead_letter_queue: ./dead_letter_queue
+
+# Path settings
+path.config: /usr/share/logstash/config
+path.logs: /usr/share/logstash/logs
+path.data: /usr/share/logstash/data
+
+# JVM settings
+jvm.options: |
+  -Xms256m
+  -Xmx256m
+  -XX:+UseG1GC
+  -XX:MaxGCPauseMillis=30
+  -XX:+HeapDumpOnOutOfMemoryError
+  -XX:HeapDumpPath=./logstash_oom.hprof
+
+# Security settings (if using Elasticsearch X-Pack)
+xpack.security.enabled: false
+#xpack.security.transport.ssl.enabled: true
+#xpack.security.transport.ssl.keystore.path: /usr/share/logstash/config/certs/keystore.jks
+#xpack.security.transport.ssl.keystore.password: changeme
+#xpack.security.transport.ssl.truststore.path: /usr/share/logstash/config/certs/truststore.jks
+#xpack.security.transport.ssl.truststore.password: changeme
+
+# Module settings
+modules:
+  - name: netflow
+    var.input.tcp.port: 5514
+    var.input.udp.port: 5514
+    var.elasticsearch.hosts: ["elasticsearch:9200"]
+    var.elasticsearch.username: "elastic"
+    var.elasticsearch.password: "${ELASTICSEARCH_PASSWORD:changeme}"

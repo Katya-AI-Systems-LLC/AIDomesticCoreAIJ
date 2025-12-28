@@ -1,0 +1,389 @@
+version: 2.1
+
+# Orbs - reusable commands and jobs
+orbs:
+  docker: circleci/docker@2.1.4
+  kubernetes: circleci/kubernetes@1.3.1
+  codecov: codecov/codecov@3.2.4
+
+# Executors - define environments
+executors:
+  python:
+    docker:
+      - image: cimg/python:3.11
+    working_directory: ~/aiplatform
+
+  python-with-services:
+    docker:
+      - image: cimg/python:3.11
+      - image: cimg/postgres:15
+        environment:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aiplatform_test
+      - image: cimg/redis:7
+    working_directory: ~/aiplatform
+
+  docker-build:
+    machine:
+      image: ubuntu-2204:2023.10.1
+    working_directory: ~/aiplatform
+
+# Commands - reusable steps
+commands:
+  install-dependencies:
+    description: Install Python dependencies
+    steps:
+      - run:
+          name: Install Python dependencies
+          command: |
+            python -m pip install --upgrade pip setuptools wheel
+            pip install -r requirements.txt
+            pip install pytest pytest-cov pytest-xdist flake8 bandit safety
+
+  run-linting:
+    description: Run code linting
+    steps:
+      - run:
+          name: Run Flake8 linting
+          command: flake8 aiplatform/ --max-line-length=100 --count --statistics || true
+
+  run-security-scan:
+    description: Run security scans
+    steps:
+      - run:
+          name: Run Bandit security scan
+          command: |
+            bandit -r aiplatform/ -f json -o bandit-report.json || true
+      - run:
+          name: Check for vulnerable dependencies
+          command: |
+            safety check --json > safety-report.json || true
+      - run:
+          name: Run pip-audit
+          command: |
+            pip-audit --desc > pip-audit-report.txt || true
+
+  run-unit-tests:
+    description: Run unit tests with coverage
+    steps:
+      - run:
+          name: Run unit tests
+          command: |
+            pytest tests/ \
+              -v \
+              --cov=aiplatform \
+              --cov-report=xml \
+              --cov-report=html \
+              --junitxml=junit.xml \
+              -n auto
+
+  run-integration-tests:
+    description: Run integration tests
+    steps:
+      - run:
+          name: Run integration tests
+          command: |
+            pytest tests/integration_tests.py \
+              -v \
+              --timeout=300 \
+              --junitxml=integration-junit.xml
+
+  build-docker-image:
+    description: Build Docker image
+    parameters:
+      tag:
+        type: string
+        default: "latest"
+    steps:
+      - setup_remote_docker:
+          version: 20.10.14
+      - run:
+          name: Build Docker image
+          command: |
+            docker build \
+              -t aiplatform/sdk:<<parameters.tag>> \
+              -t aiplatform/sdk:${CIRCLE_BUILD_NUM} \
+              --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+              --build-arg VCS_REF=${CIRCLE_SHA1} \
+              --build-arg VERSION=${CIRCLE_BUILD_NUM} \
+              -f Dockerfile .
+
+  scan-docker-image:
+    description: Scan Docker image for vulnerabilities
+    steps:
+      - run:
+          name: Install Trivy
+          command: |
+            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+      - run:
+          name: Scan Docker image
+          command: |
+            trivy image --exit-code 0 --severity HIGH,CRITICAL \
+              --format json -o trivy-report.json aiplatform/sdk:latest
+
+  push-docker-image:
+    description: Push Docker image to registry
+    parameters:
+      registry:
+        type: string
+        default: "docker.io"
+      tag:
+        type: string
+        default: "latest"
+    steps:
+      - run:
+          name: Push Docker image
+          command: |
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin <<parameters.registry>>
+            docker push aiplatform/sdk:<<parameters.tag>>
+            docker push aiplatform/sdk:${CIRCLE_BUILD_NUM}
+
+  deploy-to-kubernetes:
+    description: Deploy to Kubernetes cluster
+    parameters:
+      environment:
+        type: string
+        default: "staging"
+      image-tag:
+        type: string
+        default: "latest"
+    steps:
+      - kubernetes/install-kubectl:
+          kubectl-version: v1.27.0
+      - run:
+          name: Configure kubectl
+          command: |
+            mkdir -p ~/.kube
+            echo $KUBECONFIG_<<parameters.environment>> | base64 -d > ~/.kube/config
+            kubectl config use-context <<parameters.environment>>
+      - run:
+          name: Deploy to <<parameters.environment>>
+          command: |
+            kubectl set image deployment/aiplatform-api \
+              aiplatform-api=aiplatform/sdk:<<parameters.image-tag>> \
+              -n aiplatform \
+              --record
+            
+            kubectl rollout status deployment/aiplatform-api -n aiplatform
+
+  run-smoke-tests:
+    description: Run smoke tests
+    steps:
+      - run:
+          name: Run smoke tests
+          command: |
+            sleep 30
+            pytest tests/smoke_tests.py -v
+
+# Jobs
+jobs:
+  checkout-code:
+    executor: python
+    steps:
+      - checkout
+      - run:
+          name: Print build info
+          command: |
+            echo "Build Number: ${CIRCLE_BUILD_NUM}"
+            echo "Git Commit: ${CIRCLE_SHA1:0:7}"
+            echo "Branch: ${CIRCLE_BRANCH}"
+
+  lint-and-format:
+    executor: python
+    steps:
+      - checkout
+      - install-dependencies
+      - run-linting
+      - run:
+          name: Check code formatting with Black
+          command: black aiplatform/ --check || true
+
+  security-checks:
+    executor: python
+    steps:
+      - checkout
+      - install-dependencies
+      - run-security-scan
+      - store_artifacts:
+          path: bandit-report.json
+          destination: security/bandit-report.json
+      - store_artifacts:
+          path: safety-report.json
+          destination: security/safety-report.json
+      - store_artifacts:
+          path: pip-audit-report.txt
+          destination: security/pip-audit-report.txt
+
+  unit-tests:
+    executor: python-with-services
+    steps:
+      - checkout
+      - install-dependencies
+      - run:
+          name: Wait for services
+          command: |
+            dockerize -wait tcp://127.0.0.1:5432 -timeout 1m
+            dockerize -wait tcp://127.0.0.1:6379 -timeout 1m
+      - run-unit-tests
+      - store_test_results:
+          path: junit.xml
+      - store_artifacts:
+          path: htmlcov
+          destination: coverage
+      - codecov/upload:
+          files: ./coverage.xml
+
+  integration-tests:
+    executor: python-with-services
+    steps:
+      - checkout
+      - install-dependencies
+      - run:
+          name: Wait for services
+          command: |
+            dockerize -wait tcp://127.0.0.1:5432 -timeout 1m
+            dockerize -wait tcp://127.0.0.1:6379 -timeout 1m
+      - run-integration-tests
+      - store_test_results:
+          path: integration-junit.xml
+
+  build-image:
+    executor: docker-build
+    steps:
+      - checkout
+      - build-docker-image:
+          tag: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+      - scan-docker-image
+      - store_artifacts:
+          path: trivy-report.json
+          destination: security/trivy-report.json
+
+  push-image:
+    executor: docker-build
+    steps:
+      - checkout
+      - build-docker-image:
+          tag: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+      - push-docker-image:
+          registry: "docker.io"
+          tag: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+
+  deploy-staging:
+    executor: python
+    steps:
+      - checkout
+      - install-dependencies
+      - deploy-to-kubernetes:
+          environment: "staging"
+          image-tag: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+      - run-smoke-tests
+
+  deploy-production:
+    executor: python
+    steps:
+      - checkout
+      - install-dependencies
+      - deploy-to-kubernetes:
+          environment: "production"
+          image-tag: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+      - run:
+          name: Verify production deployment
+          command: |
+            kubectl get deployment aiplatform-api -n aiplatform
+            kubectl get pods -n aiplatform -l app=aiplatform-api
+
+  performance-tests:
+    executor: python
+    steps:
+      - checkout
+      - install-dependencies
+      - run:
+          name: Install load testing tools
+          command: pip install locust
+      - run:
+          name: Run performance tests
+          command: |
+            locust -f tests/locustfile.py \
+              --host=https://api.aiplatform.com \
+              --users=100 \
+              --spawn-rate=10 \
+              --run-time=5m \
+              --headless
+      - store_artifacts:
+          path: results.html
+          destination: performance/results.html
+
+# Workflows
+workflows:
+  version: 2
+
+  build-test-deploy:
+    jobs:
+      - checkout-code
+
+      - lint-and-format:
+          requires:
+            - checkout-code
+
+      - security-checks:
+          requires:
+            - checkout-code
+
+      - unit-tests:
+          requires:
+            - checkout-code
+
+      - integration-tests:
+          requires:
+            - unit-tests
+
+      - build-image:
+          requires:
+            - lint-and-format
+            - security-checks
+            - integration-tests
+
+      - push-image:
+          requires:
+            - build-image
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+                - staging
+
+      - deploy-staging:
+          requires:
+            - push-image
+          filters:
+            branches:
+              only:
+                - develop
+                - staging
+
+      - hold-production:
+          type: approval
+          requires:
+            - push-image
+          filters:
+            branches:
+              only:
+                - main
+
+      - deploy-production:
+          requires:
+            - hold-production
+          filters:
+            branches:
+              only:
+                - main
+
+      - performance-tests:
+          requires:
+            - deploy-staging
+          filters:
+            branches:
+              only:
+                - develop
+                - staging

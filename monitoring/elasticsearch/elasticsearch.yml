@@ -1,0 +1,116 @@
+# Elasticsearch Configuration
+cluster.name: "aiplatform-cluster"
+node.name: "${HOSTNAME:es-node-1}"
+
+# Node roles
+node.roles: [master, data, ingest, ml]
+
+# Network settings
+network.host: "0.0.0.0"
+http.port: 9200
+transport.port: 9300
+
+# Path settings
+path.data: /usr/share/elasticsearch/data
+path.logs: /usr/share/elasticsearch/logs
+
+# Discovery settings for clustering
+discovery.type: "${DISCOVERY_TYPE:single-node}"
+discovery.seed_hosts:
+  - "elasticsearch-1:9300"
+  - "elasticsearch-2:9300"
+  - "elasticsearch-3:9300"
+
+cluster.initial_master_nodes:
+  - "elasticsearch-1"
+  - "elasticsearch-2"
+  - "elasticsearch-3"
+
+# Cluster settings
+cluster.max_shards_per_node: 5000
+
+# Heap size settings (set via environment: ES_JAVA_OPTS=-Xms512m -Xmx512m)
+# Memory settings
+bootstrap.memory_lock: true
+
+# Security settings (XPack)
+xpack.security.enabled: "${XPACK_SECURITY_ENABLED:true}"
+xpack.security.enrollment.enabled: true
+
+# HTTPS settings
+xpack.security.http.ssl:
+  enabled: "${XPACK_SECURITY_HTTP_SSL_ENABLED:false}"
+  keystore.path: /usr/share/elasticsearch/config/certs/elasticsearch.p12
+  truststore.path: /usr/share/elasticsearch/config/certs/elasticsearch.p12
+
+# Transport SSL settings
+xpack.security.transport.ssl:
+  enabled: "${XPACK_SECURITY_TRANSPORT_SSL_ENABLED:false}"
+  keystore.path: /usr/share/elasticsearch/config/certs/elasticsearch.p12
+  truststore.path: /usr/share/elasticsearch/config/certs/elasticsearch.p12
+
+# Monitoring settings
+xpack.monitoring.collection.enabled: true
+xpack.monitoring.collection.interval: 30s
+
+# ML settings
+xpack.ml.enabled: true
+xpack.ml.max_open_jobs: 20
+xpack.ml.max_anomaly_records: 500
+
+# Ingest settings
+node.ingest: true
+
+# Search settings
+search.remote.connect: false
+
+# Action settings
+action.auto_create_index: "+aiplatform-*,+.watches,+.triggered_watches,+.watcher-history-*,+.monitoring-*,-*"
+
+# Index lifecycle management settings
+xpack.ilm.enabled: true
+
+# Template settings for log indexing
+#index.template.name: aiplatform-logs
+#index.template.pattern: "aiplatform-*"
+#index.number_of_replicas: 2
+#index.number_of_shards: 3
+#index.codec: best_compression
+#index.refresh_interval: 30s
+
+# Snapshot settings
+repositories:
+  backup:
+    type: s3
+    settings:
+      bucket: "aiplatform-es-backups"
+      region: "us-east-1"
+      base_path: "elasticsearch-snapshots"
+      compress: true
+
+# Logging settings
+logger.level: INFO
+logger.org.elasticsearch: INFO
+logger.org.elasticsearch.transport: WARN
+logger.org.elasticsearch.indices: WARN
+
+# Cross-Origin settings for Kibana
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+http.cors.allow-methods: OPTIONS, HEAD, GET, POST, PUT, DELETE
+http.cors.allow-headers: X-Requested-With, Content-Type, Content-Length, X-Elastic-Product
+
+# Recovery settings
+indices.recovery.max_bytes_per_sec: 40mb
+indices.recovery.max_concurrent_file_chunks: 2
+
+# GC settings
+-XX:+AlwaysPreTouch
+-XX:HeapDumpPath=data
+-XX:HeapDumpOnOutOfMemoryError
+-XX:ErrorFile=logs/hs_err_pid%p.log
+
+# Performance tuning
+thread_pool.write.queue_size: 1000
+thread_pool.search.queue_size: 1000
+indices.memory.index_buffer_size: 30%

@@ -1,0 +1,163 @@
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aiplatform-sa
+  namespace: aiplatform
+  labels:
+    app: aiplatform
+
+---
+# ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aiplatform-role
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs/status"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aiplatform-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aiplatform-role
+subjects:
+- kind: ServiceAccount
+  name: aiplatform-sa
+  namespace: aiplatform
+
+---
+# API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiplatform-api
+  namespace: aiplatform
+  labels:
+    app: aiplatform
+    component: api
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8001"
+spec:
+  type: ClusterIP
+  selector:
+    app: aiplatform
+    component: api
+  ports:
+  - name: http
+    port: 8000
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 8001
+    targetPort: metrics
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+# Mesh Worker Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiplatform-mesh-worker
+  namespace: aiplatform
+  labels:
+    app: aiplatform
+    component: mesh-worker
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: aiplatform
+    component: mesh-worker
+  ports:
+  - name: mesh
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+
+---
+# 3D Renderer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiplatform-3d-renderer
+  namespace: aiplatform
+  labels:
+    app: aiplatform
+    component: 3d-renderer
+spec:
+  type: ClusterIP
+  selector:
+    app: aiplatform
+    component: 3d-renderer
+  ports:
+  - name: webgl
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+
+---
+# Redis Service (assuming Redis is deployed separately)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: aiplatform
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+
+---
+# PostgreSQL Service (assuming PostgreSQL is deployed separately)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: aiplatform
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432

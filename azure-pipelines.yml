@@ -1,0 +1,391 @@
+trigger:
+  - main
+  - develop
+  - staging
+  - feature/*
+
+pr:
+  - main
+  - develop
+  - staging
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  dockerRegistryServiceConnection: 'docker-registry-connection'
+  imageRepository: 'aiplatform/sdk'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  commitHash: '$(Build.SourceVersion)'
+  commitHashShort: $(Build.SourceVersion.Substring(0,7))
+  buildDate: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+stages:
+  - stage: Build
+    displayName: Build and Test
+    jobs:
+      - job: BuildAndTest
+        displayName: Build, Lint, Test
+        pool:
+          vmImage: 'ubuntu-latest'
+
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: 'Use Python 3.11'
+
+          - script: |
+              python -m pip install --upgrade pip setuptools wheel
+              pip install -r requirements.txt
+              pip install pytest pytest-cov pytest-xdist flake8 bandit safety
+            displayName: 'Install Dependencies'
+
+          - script: |
+              echo "Running Flake8 linter..."
+              flake8 aiplatform/ --max-line-length=100 --count --statistics || true
+            displayName: 'Code Linting'
+
+          - script: |
+              echo "Running code formatting check..."
+              pip install black
+              black aiplatform/ --check || true
+            displayName: 'Check Code Format'
+
+  - stage: Security
+    displayName: Security Scanning
+    dependsOn: Build
+    jobs:
+      - job: SecurityScan
+        displayName: Security & Vulnerability Scan
+        pool:
+          vmImage: 'ubuntu-latest'
+
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: 'Use Python 3.11'
+
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+              pip install bandit safety
+            displayName: 'Install Dependencies'
+
+          - script: |
+              echo "Running Bandit security scan..."
+              bandit -r aiplatform/ -f json -o $(Build.ArtifactStagingDirectory)/bandit-report.json || true
+            displayName: 'Bandit Security Scan'
+
+          - script: |
+              echo "Checking for vulnerable dependencies..."
+              safety check --json > $(Build.ArtifactStagingDirectory)/safety-report.json || true
+            displayName: 'Dependency Vulnerability Check'
+
+          - script: |
+              echo "Running pip-audit..."
+              pip-audit --desc > $(Build.ArtifactStagingDirectory)/pip-audit-report.txt || true
+            displayName: 'Pip Audit Check'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'security-reports'
+            displayName: 'Publish Security Reports'
+
+  - stage: Test
+    displayName: Unit and Integration Tests
+    dependsOn: Build
+    jobs:
+      - job: UnitTests
+        displayName: Unit Tests (Python 3.11)
+        pool:
+          vmImage: 'ubuntu-latest'
+        services:
+          postgres: postgres
+          redis: redis
+
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: 'Use Python 3.11'
+
+          - script: |
+              python -m pip install --upgrade pip setuptools wheel
+              pip install -r requirements.txt
+              pip install pytest pytest-cov pytest-xdist
+            displayName: 'Install Dependencies'
+
+          - script: |
+              echo "Waiting for services..."
+              timeout 60 bash -c 'until pg_isready -h postgres; do sleep 1; done'
+              timeout 60 bash -c 'until redis-cli -h redis ping; do sleep 1; done'
+            displayName: 'Wait for Services'
+
+          - script: |
+              pytest tests/ \
+                -v \
+                --cov=aiplatform \
+                --cov-report=xml \
+                --cov-report=html \
+                --junitxml=$(Common.TestResultsDirectory)/junit.xml \
+                -n auto
+            env:
+              DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/aiplatform_test'
+              REDIS_URL: 'redis://redis:6379/0'
+            displayName: 'Run Unit Tests'
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFiles: '$(Common.TestResultsDirectory)/junit.xml'
+              testRunTitle: 'Unit Tests'
+            displayName: 'Publish Unit Test Results'
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: Cobertura
+              summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+              reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+            displayName: 'Publish Coverage Reports'
+
+      - job: IntegrationTests
+        displayName: Integration Tests
+        pool:
+          vmImage: 'ubuntu-latest'
+        services:
+          postgres: postgres
+          redis: redis
+
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: 'Use Python 3.11'
+
+          - script: |
+              python -m pip install --upgrade pip setuptools wheel
+              pip install -r requirements.txt
+              pip install pytest
+            displayName: 'Install Dependencies'
+
+          - script: |
+              pytest tests/integration_tests.py \
+                -v \
+                --timeout=300 \
+                --junitxml=$(Common.TestResultsDirectory)/integration-junit.xml
+            env:
+              DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/aiplatform_test'
+              REDIS_URL: 'redis://redis:6379/0'
+            displayName: 'Run Integration Tests'
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFiles: '$(Common.TestResultsDirectory)/integration-junit.xml'
+              testRunTitle: 'Integration Tests'
+            displayName: 'Publish Integration Test Results'
+
+  - stage: Docker
+    displayName: Build and Push Docker Image
+    dependsOn: [Build, Security, Test]
+    condition: succeeded()
+    jobs:
+      - job: BuildDockerImage
+        displayName: Build Docker Image
+        pool:
+          vmImage: 'ubuntu-latest'
+
+        steps:
+          - task: Docker@2
+            inputs:
+              command: 'build'
+              Dockerfile: '$(dockerfilePath)'
+              tags: |
+                $(imageRepository):$(tag)
+                $(imageRepository):$(Build.SourceBranchName)
+                $(imageRepository):latest
+              arguments: |
+                --build-arg BUILD_DATE=$(buildDate)
+                --build-arg VCS_REF=$(commitHashShort)
+                --build-arg VERSION=$(tag)
+            displayName: 'Build Docker Image'
+
+      - job: ScanDockerImage
+        displayName: Scan Docker Image
+        pool:
+          vmImage: 'ubuntu-latest'
+        dependsOn: BuildDockerImage
+
+        steps:
+          - script: |
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+            displayName: 'Install Trivy'
+
+          - task: Docker@2
+            inputs:
+              command: 'build'
+              Dockerfile: '$(dockerfilePath)'
+              tags: |
+                $(imageRepository):$(tag)
+            displayName: 'Build Image for Scanning'
+
+          - script: |
+              trivy image --exit-code 0 --severity HIGH,CRITICAL \
+                --format json -o $(Build.ArtifactStagingDirectory)/trivy-report.json \
+                $(imageRepository):$(tag)
+            displayName: 'Scan with Trivy'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'container-scan'
+            displayName: 'Publish Scan Report'
+
+      - job: PushDockerImage
+        displayName: Push Docker Image to Registry
+        pool:
+          vmImage: 'ubuntu-latest'
+        dependsOn: ScanDockerImage
+        condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/staging')))
+
+        steps:
+          - task: Docker@2
+            inputs:
+              command: 'build'
+              Dockerfile: '$(dockerfilePath)'
+              tags: |
+                $(imageRepository):$(tag)
+                $(imageRepository):$(Build.SourceBranchName)
+                $(imageRepository):latest
+            displayName: 'Build Docker Image'
+
+          - task: Docker@2
+            inputs:
+              command: 'push'
+              containerRegistry: '$(dockerRegistryServiceConnection)'
+              repository: '$(imageRepository)'
+              tags: |
+                $(tag)
+                $(Build.SourceBranchName)
+                latest
+            displayName: 'Push Docker Image'
+
+  - stage: Deploy
+    displayName: Deploy
+    dependsOn: Docker
+    condition: succeeded()
+    jobs:
+      - deployment: DeployToStaging
+        displayName: Deploy to Staging
+        environment: 'staging'
+        condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: KubernetesManifest@0
+                  inputs:
+                    action: 'deploy'
+                    kubernetesServiceConnection: 'staging-kubernetes'
+                    namespace: 'aiplatform'
+                    manifests: |
+                      k8s/deployment.yaml
+                      k8s/service.yaml
+                      k8s/ingress.yaml
+                    containers: |
+                      $(imageRepository):$(tag)
+                  displayName: 'Deploy to Staging'
+
+                - script: |
+                    echo "Verifying deployment..."
+                    kubectl rollout status deployment/aiplatform-api -n aiplatform
+                  displayName: 'Verify Deployment'
+
+                - script: |
+                    echo "Running smoke tests..."
+                    sleep 30
+                    pytest tests/smoke_tests.py -v
+                  displayName: 'Run Smoke Tests'
+
+      - deployment: DeployToProduction
+        displayName: Deploy to Production
+        environment: 'production'
+        condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+        strategy:
+          runOnce:
+            preDeploy:
+              steps:
+                - script: echo "Pre-deployment validation..."
+                  displayName: 'Validate Pre-deployment'
+
+            deploy:
+              steps:
+                - task: KubernetesManifest@0
+                  inputs:
+                    action: 'deploy'
+                    kubernetesServiceConnection: 'production-kubernetes'
+                    namespace: 'aiplatform'
+                    manifests: |
+                      k8s/deployment.yaml
+                      k8s/service.yaml
+                      k8s/ingress.yaml
+                    containers: |
+                      $(imageRepository):$(tag)
+                  displayName: 'Deploy to Production'
+
+                - script: |
+                    echo "Verifying production deployment..."
+                    kubectl rollout status deployment/aiplatform-api -n aiplatform
+                  displayName: 'Verify Production Deployment'
+
+                - script: |
+                    echo "Running production health checks..."
+                    pytest tests/health_check.py -v
+                  displayName: 'Run Health Checks'
+
+            postDeploy:
+              steps:
+                - script: |
+                    echo "Post-deployment verification..."
+                    kubectl get deployment aiplatform-api -n aiplatform
+                    kubectl get pods -n aiplatform -l app=aiplatform-api
+                  displayName: 'Verify Resources'
+
+  - stage: Performance
+    displayName: Performance Testing
+    dependsOn: Deploy
+    condition: succeeded()
+    jobs:
+      - job: PerformanceTest
+        displayName: Load and Performance Tests
+        pool:
+          vmImage: 'ubuntu-latest'
+        condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: 'Use Python 3.11'
+
+          - script: |
+              python -m pip install --upgrade pip
+              pip install locust
+            displayName: 'Install Performance Testing Tools'
+
+          - script: |
+              locust -f tests/locustfile.py \
+                --host=https://api.staging.aiplatform.com \
+                --users=100 \
+                --spawn-rate=10 \
+                --run-time=5m \
+                --headless
+            displayName: 'Run Performance Tests'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'performance-results'
+            displayName: 'Publish Performance Results'

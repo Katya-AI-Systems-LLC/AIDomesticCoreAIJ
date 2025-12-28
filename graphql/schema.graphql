@@ -1,0 +1,721 @@
+"""
+AI Platform GraphQL Schema
+Comprehensive GraphQL API for quantum optimization, vision analysis,
+federated learning, and ML inference operations.
+"""
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+# ============================================================================
+# ROOT QUERY TYPE
+# ============================================================================
+
+type Query {
+  """Get service health status"""
+  health: HealthStatus!
+
+  """Get detailed service status including dependencies"""
+  status: DetailedStatus!
+
+  """Get optimization job by ID"""
+  optimizationJob(id: ID!): OptimizationJob
+
+  """List optimization jobs with filtering"""
+  optimizationJobs(
+    limit: Int = 20
+    offset: Int = 0
+    status: OptimizationStatus
+    problem_type: ProblemType
+  ): OptimizationJobConnection!
+
+  """Get vision analysis results by ID"""
+  visionAnalysis(id: ID!): VisionAnalysis
+
+  """List vision analysis jobs"""
+  visionAnalysisJobs(
+    limit: Int = 20
+    offset: Int = 0
+    status: JobStatus
+  ): VisionAnalysisConnection!
+
+  """Get federated training job"""
+  federatedTrainingJob(id: ID!): FederatedTrainingJob
+
+  """List federated training jobs"""
+  federatedTrainingJobs(
+    limit: Int = 20
+    offset: Int = 0
+    status: TrainingStatus
+  ): FederatedTrainingConnection!
+
+  """Get ML model by ID"""
+  model(id: ID!): MLModel
+
+  """List available ML models"""
+  models(
+    limit: Int = 20
+    offset: Int = 0
+    type: ModelType
+    framework: Framework
+  ): ModelConnection!
+
+  """Get inference result by ID"""
+  inference(id: ID!): InferenceResult
+
+  """List inference jobs"""
+  inferenceJobs(
+    limit: Int = 20
+    offset: Int = 0
+    status: JobStatus
+  ): InferenceConnection!
+
+  """Get project by ID"""
+  project(id: ID!): Project
+
+  """List user's projects"""
+  projects(
+    limit: Int = 20
+    offset: Int = 0
+  ): ProjectConnection!
+
+  """Get current user information"""
+  currentUser: User!
+
+  """Get user by ID (admin only)"""
+  user(id: ID!): User
+
+  """Search across all resources"""
+  search(
+    query: String!
+    limit: Int = 20
+  ): [SearchResult!]!
+}
+
+# ============================================================================
+# ROOT MUTATION TYPE
+# ============================================================================
+
+type Mutation {
+  """Submit a quantum optimization problem"""
+  submitOptimization(input: OptimizationInput!): OptimizationJob!
+
+  """Cancel an optimization job"""
+  cancelOptimization(id: ID!): OptimizationJob!
+
+  """Submit vision analysis task"""
+  submitVisionAnalysis(input: VisionAnalysisInput!): VisionAnalysis!
+
+  """Start federated training"""
+  startFederatedTraining(input: FederatedTrainingInput!): FederatedTrainingJob!
+
+  """Update federated training"""
+  updateFederatedTraining(id: ID!, input: UpdateFederatedTrainingInput!): FederatedTrainingJob!
+
+  """Run ML inference"""
+  runInference(input: InferenceInput!): InferenceResult!
+
+  """Create a new project"""
+  createProject(input: CreateProjectInput!): Project!
+
+  """Update project"""
+  updateProject(id: ID!, input: UpdateProjectInput!): Project!
+
+  """Delete project"""
+  deleteProject(id: ID!): Boolean!
+
+  """Fine-tune a model"""
+  finetuneModel(input: FinetuneInput!): FinetuneJob!
+
+  """Deploy model to production"""
+  deployModel(input: DeployModelInput!): ModelDeployment!
+
+  """Create API key"""
+  createApiKey(input: CreateApiKeyInput!): ApiKey!
+
+  """Revoke API key"""
+  revokeApiKey(keyId: ID!): Boolean!
+}
+
+# ============================================================================
+# SUBSCRIPTION TYPE
+# ============================================================================
+
+type Subscription {
+  """Subscribe to optimization job progress"""
+  optimizationProgress(jobId: ID!): OptimizationProgressUpdate!
+
+  """Subscribe to vision analysis progress"""
+  visionAnalysisProgress(jobId: ID!): VisionAnalysisUpdate!
+
+  """Subscribe to training progress"""
+  trainingProgress(jobId: ID!): TrainingProgressUpdate!
+
+  """Subscribe to inference results"""
+  inferenceCompleted(jobId: ID!): InferenceResult!
+
+  """Subscribe to model deployment status"""
+  deploymentProgress(deploymentId: ID!): DeploymentUpdate!
+}
+
+# ============================================================================
+# HEALTH & STATUS TYPES
+# ============================================================================
+
+type HealthStatus {
+  status: ServiceStatus!
+  timestamp: DateTime!
+  version: String!
+}
+
+type DetailedStatus {
+  status: ServiceStatus!
+  timestamp: DateTime!
+  version: String!
+  services: ServiceStatusDetails!
+}
+
+type ServiceStatusDetails {
+  database: ServiceHealthStatus!
+  cache: ServiceHealthStatus!
+  quantum_processor: ServiceHealthStatus!
+  ml_engine: ServiceHealthStatus!
+  vision_service: ServiceHealthStatus!
+}
+
+enum ServiceStatus {
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+}
+
+enum ServiceHealthStatus {
+  HEALTHY
+  UNHEALTHY
+  DEGRADED
+}
+
+# ============================================================================
+# OPTIMIZATION TYPES
+# ============================================================================
+
+type OptimizationJob {
+  id: ID!
+  problem_type: ProblemType!
+  status: OptimizationStatus!
+  graph_size: Int!
+  constraint_level: ConstraintLevel!
+  priority: Priority!
+  created_at: DateTime!
+  updated_at: DateTime!
+  estimated_completion: DateTime
+  result: OptimizationResult
+  queue_position: Int
+  execution_time_ms: Int
+}
+
+type OptimizationResult {
+  job_id: ID!
+  optimal_value: Float!
+  variables: [Float!]!
+  confidence: Float!
+  quantum_circuits_used: Int!
+  execution_time_ms: Int!
+  algorithm: String!
+}
+
+type OptimizationProgressUpdate {
+  job_id: ID!
+  status: OptimizationStatus!
+  progress_percentage: Int!
+  current_iteration: Int
+  total_iterations: Int
+  timestamp: DateTime!
+}
+
+input OptimizationInput {
+  problem_type: ProblemType!
+  graph_size: Int!
+  constraint_level: ConstraintLevel = MEDIUM
+  timeout_seconds: Int = 300
+  priority: Priority = NORMAL
+}
+
+enum ProblemType {
+  MAXCUT
+  TSP
+  VRP
+  QAOA
+  QUBO
+  PORTFOLIO
+  GRAPH_COLORING
+}
+
+enum OptimizationStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ConstraintLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+type OptimizationJobConnection {
+  edges: [OptimizationJobEdge!]!
+  pageInfo: PageInfo!
+  total: Int!
+}
+
+type OptimizationJobEdge {
+  cursor: String!
+  node: OptimizationJob!
+}
+
+# ============================================================================
+# VISION ANALYSIS TYPES
+# ============================================================================
+
+type VisionAnalysis {
+  id: ID!
+  analysis_type: AnalysisType!
+  status: JobStatus!
+  created_at: DateTime!
+  image_url: String
+  detections: [Detection!]
+  classification: Classification
+  scene_description: String
+  text_content: String
+}
+
+type Detection {
+  class: String!
+  confidence: Float!
+  bounding_box: BoundingBox!
+  attributes: [Attribute!]
+}
+
+type BoundingBox {
+  x: Float!
+  y: Float!
+  width: Float!
+  height: Float!
+}
+
+type Attribute {
+  name: String!
+  value: String!
+  confidence: Float!
+}
+
+type Classification {
+  class: String!
+  confidence: Float!
+  alternatives: [ClassificationAlternative!]
+}
+
+type ClassificationAlternative {
+  class: String!
+  confidence: Float!
+}
+
+type VisionAnalysisUpdate {
+  job_id: ID!
+  status: JobStatus!
+  progress_percentage: Int!
+  timestamp: DateTime!
+}
+
+input VisionAnalysisInput {
+  image_url: String!
+  analysis_type: AnalysisType!
+  confidence_threshold: Float = 0.5
+}
+
+enum AnalysisType {
+  DETECTION
+  CLASSIFICATION
+  SCENE
+  OCR
+  SEGMENTATION
+}
+
+type VisionAnalysisConnection {
+  edges: [VisionAnalysisEdge!]!
+  pageInfo: PageInfo!
+  total: Int!
+}
+
+type VisionAnalysisEdge {
+  cursor: String!
+  node: VisionAnalysis!
+}
+
+# ============================================================================
+# FEDERATED LEARNING TYPES
+# ============================================================================
+
+type FederatedTrainingJob {
+  id: ID!
+  dataset_name: String!
+  framework: Framework!
+  status: TrainingStatus!
+  current_round: Int!
+  total_rounds: Int!
+  participants_total: Int!
+  participants_active: Int!
+  aggregation_method: AggregationMethod!
+  privacy_epsilon: Float
+  metrics: TrainingMetrics!
+  created_at: DateTime!
+  updated_at: DateTime!
+}
+
+type TrainingMetrics {
+  accuracy: Float
+  loss: Float
+  validation_accuracy: Float
+  learning_rate: Float
+}
+
+type TrainingProgressUpdate {
+  job_id: ID!
+  current_round: Int!
+  total_rounds: Int!
+  participants_active: Int!
+  metrics: TrainingMetrics!
+  timestamp: DateTime!
+}
+
+input FederatedTrainingInput {
+  dataset_name: String!
+  framework: Framework!
+  participants: Int!
+  rounds: Int = 10
+  aggregation_method: AggregationMethod = FedAvg
+  privacy_epsilon: Float
+}
+
+input UpdateFederatedTrainingInput {
+  participants: Int
+  rounds: Int
+  aggregation_method: AggregationMethod
+}
+
+enum Framework {
+  PYTORCH
+  TENSORFLOW
+  JAX
+}
+
+enum AggregationMethod {
+  FedAvg
+  FedProx
+  FedAdam
+  FedSGD
+}
+
+enum TrainingStatus {
+  INITIALIZING
+  WAITING_FOR_PARTICIPANTS
+  TRAINING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+type FederatedTrainingConnection {
+  edges: [FederatedTrainingEdge!]!
+  pageInfo: PageInfo!
+  total: Int!
+}
+
+type FederatedTrainingEdge {
+  cursor: String!
+  node: FederatedTrainingJob!
+}
+
+# ============================================================================
+# ML MODEL TYPES
+# ============================================================================
+
+type MLModel {
+  id: ID!
+  name: String!
+  type: ModelType!
+  framework: Framework!
+  accuracy: Float
+  description: String!
+  input_schema: JSON!
+  output_schema: JSON!
+  parameters: JSON!
+  version: String!
+  is_deployed: Boolean!
+  created_at: DateTime!
+  updated_at: DateTime!
+  owner: User!
+}
+
+type ModelDeployment {
+  id: ID!
+  model_id: ID!
+  environment: DeploymentEnvironment!
+  status: DeploymentStatus!
+  created_at: DateTime!
+  replicas: Int!
+  traffic_weight: Float!
+}
+
+input DeployModelInput {
+  model_id: ID!
+  environment: DeploymentEnvironment!
+  replicas: Int = 1
+}
+
+enum ModelType {
+  CLASSIFICATION
+  DETECTION
+  REGRESSION
+  SEGMENTATION
+  NLP
+  FORECASTING
+  CUSTOM
+}
+
+enum DeploymentEnvironment {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+enum DeploymentStatus {
+  PENDING
+  DEPLOYING
+  ACTIVE
+  UPDATING
+  FAILED
+  INACTIVE
+}
+
+type ModelConnection {
+  edges: [ModelEdge!]!
+  pageInfo: PageInfo!
+  total: Int!
+}
+
+type ModelEdge {
+  cursor: String!
+  node: MLModel!
+}
+
+# ============================================================================
+# INFERENCE TYPES
+# ============================================================================
+
+type InferenceResult {
+  id: ID!
+  model_id: ID!
+  status: JobStatus!
+  input_data: JSON!
+  prediction: JSON!
+  confidence: Float
+  inference_time_ms: Int!
+  model_version: String!
+  created_at: DateTime!
+}
+
+input InferenceInput {
+  model_id: ID!
+  input_data: JSON!
+  parameters: JSON
+}
+
+type InferenceConnection {
+  edges: [InferenceEdge!]!
+  pageInfo: PageInfo!
+  total: Int!
+}
+
+type InferenceEdge {
+  cursor: String!
+  node: InferenceResult!
+}
+
+# ============================================================================
+# FINETUNING TYPES
+# ============================================================================
+
+type FinetuneJob {
+  id: ID!
+  base_model_id: ID!
+  training_data_path: String!
+  status: TrainingStatus!
+  created_at: DateTime!
+  updated_at: DateTime!
+  metrics: TrainingMetrics!
+  output_model: MLModel
+}
+
+input FinetuneInput {
+  base_model_id: ID!
+  training_data_path: String!
+  learning_rate: Float = 0.001
+  epochs: Int = 10
+  batch_size: Int = 32
+}
+
+# ============================================================================
+# PROJECT TYPES
+# ============================================================================
+
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  tags: [String!]
+  owner: User!
+  created_at: DateTime!
+  updated_at: DateTime!
+  jobs: [Job!]!
+  models: [MLModel!]!
+}
+
+type ProjectConnection {
+  edges: [ProjectEdge!]!
+  pageInfo: PageInfo!
+  total: Int!
+}
+
+type ProjectEdge {
+  cursor: String!
+  node: Project!
+}
+
+input CreateProjectInput {
+  name: String!
+  description: String
+  tags: [String!]
+}
+
+input UpdateProjectInput {
+  name: String
+  description: String
+  tags: [String!]
+}
+
+# ============================================================================
+# USER & AUTHENTICATION TYPES
+# ============================================================================
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  created_at: DateTime!
+  roles: [String!]!
+  api_keys: [ApiKey!]!
+  usage_stats: UsageStats!
+}
+
+type ApiKey {
+  id: ID!
+  name: String!
+  key: String  # Only returned on creation
+  created_at: DateTime!
+  last_used_at: DateTime
+  expires_at: DateTime
+}
+
+type UsageStats {
+  api_calls_this_month: Int!
+  data_processed_gb: Float!
+  quota_remaining: Int!
+  current_month_cost: Float!
+}
+
+input CreateApiKeyInput {
+  name: String!
+  expires_in_days: Int
+}
+
+# ============================================================================
+# DEPLOYMENT TYPES
+# ============================================================================
+
+type DeploymentUpdate {
+  deployment_id: ID!
+  status: DeploymentStatus!
+  progress_percentage: Int!
+  message: String
+  timestamp: DateTime!
+}
+
+# ============================================================================
+# UNION TYPES FOR SEARCH
+# ============================================================================
+
+union SearchResult = OptimizationJob | VisionAnalysis | MLModel | Project | FederatedTrainingJob
+
+# ============================================================================
+# SCALAR & ENUM TYPES
+# ============================================================================
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Job {
+  id: ID!
+  type: String!
+  status: JobStatus!
+  created_at: DateTime!
+  updated_at: DateTime!
+}
+
+scalar DateTime
+scalar JSON
+
+# ============================================================================
+# DIRECTIVES
+# ============================================================================
+
+"""Marks a field or argument as deprecated"""
+directive @deprecated(
+  reason: String = "No longer supported"
+) on FIELD_DEFINITION | ARGUMENT_DEFINITION
+
+"""Conditionally includes a field based on the provided boolean"""
+directive @include(if: Boolean!) on FIELD | FRAGMENT_INCLUSION
+
+"""Conditionally skips a field based on the provided boolean"""
+directive @skip(if: Boolean!) on FIELD | FRAGMENT_INCLUSION
+
+"""Validates input complexity to prevent expensive queries"""
+directive @complexity(value: Int!) on FIELD_DEFINITION
+
+"""Requires user to have specific role"""
+directive @requiresRole(role: String!) on FIELD_DEFINITION

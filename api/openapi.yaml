@@ -1,0 +1,1024 @@
+openapi: 3.0.3
+info:
+  title: AI Platform API
+  description: |
+    Comprehensive RESTful API for the AI Platform supporting quantum optimization,
+    vision analysis, federated learning, and advanced AI operations.
+    
+    ## Authentication
+    All endpoints require an API key in the Authorization header:
+    ```
+    Authorization: Bearer <api_key>
+    ```
+    
+    ## Rate Limiting
+    - Standard tier: 1,000 requests/hour
+    - Premium tier: 10,000 requests/hour
+    - Enterprise: Unlimited
+    
+    Rate limit headers:
+    - `X-RateLimit-Limit`: Requests per hour
+    - `X-RateLimit-Remaining`: Requests remaining
+    - `X-RateLimit-Reset`: Unix timestamp of reset time
+    
+    ## Versioning
+    API version is included in the path: `/api/v1/`
+  
+  version: 1.0.0
+  contact:
+    name: AI Platform Support
+    url: https://support.aiplatform.io
+    email: api-support@aiplatform.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://api.aiplatform.io/api/v1
+    description: Production API
+  - url: https://staging-api.aiplatform.io/api/v1
+    description: Staging API
+  - url: http://localhost:8000/api/v1
+    description: Local development
+
+tags:
+  - name: Health
+    description: Service health and status
+  - name: Optimization
+    description: Quantum optimization endpoints
+  - name: Vision
+    description: Computer vision analysis
+  - name: Federated Learning
+    description: Federated training operations
+  - name: Inference
+    description: Model inference endpoints
+  - name: Training
+    description: Model training and fine-tuning
+  - name: Projects
+    description: Project management
+  - name: Admin
+    description: Administrative operations
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service health status
+      operationId: getHealth
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service unavailable
+
+  /status:
+    get:
+      summary: Detailed status
+      description: Returns detailed service status including dependencies
+      operationId: getStatus
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Detailed status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedStatus'
+
+  /optimize:
+    post:
+      summary: Quantum optimization
+      description: |
+        Submit an optimization problem for quantum processing.
+        
+        ### Problem Types
+        - MAXCUT: Maximum cut problem
+        - TSP: Traveling Salesman Problem
+        - VRP: Vehicle Routing Problem
+        - QAOA: Quantum Approximate Optimization Algorithm
+        - QUBO: Quadratic Unconstrained Binary Optimization
+      operationId: submitOptimization
+      tags:
+        - Optimization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptimizationRequest'
+            examples:
+              maxcut:
+                summary: MAXCUT problem
+                value:
+                  problem_type: MAXCUT
+                  graph_size: 10
+                  constraint_level: HIGH
+              tsp:
+                summary: TSP problem
+                value:
+                  problem_type: TSP
+                  num_cities: 15
+                  constraint_level: MEDIUM
+      responses:
+        '202':
+          description: Optimization job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResponse'
+        '400':
+          description: Invalid problem specification
+        '429':
+          description: Rate limit exceeded
+
+  /optimize/{job_id}:
+    get:
+      summary: Get optimization result
+      description: Retrieve the result of a submitted optimization job
+      operationId: getOptimizationResult
+      tags:
+        - Optimization
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Optimization result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResult'
+        '404':
+          description: Job not found
+        '202':
+          description: Still processing
+
+  /optimize/{job_id}/cancel:
+    post:
+      summary: Cancel optimization job
+      operationId: cancelOptimization
+      tags:
+        - Optimization
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job cancelled
+        '404':
+          description: Job not found
+
+  /vision/analyze:
+    post:
+      summary: Vision analysis
+      description: |
+        Analyze images for:
+        - Object detection
+        - Image classification
+        - Scene understanding
+        - Text recognition (OCR)
+      operationId: analyzeImage
+      tags:
+        - Vision
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file
+                analysis_type:
+                  type: string
+                  enum: [DETECTION, CLASSIFICATION, SCENE, OCR]
+                  default: DETECTION
+                confidence_threshold:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                  default: 0.5
+              required:
+                - image
+      responses:
+        '200':
+          description: Analysis results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionAnalysisResult'
+        '400':
+          description: Invalid image or parameters
+        '413':
+          description: Image too large
+
+  /vision/batch:
+    post:
+      summary: Batch vision analysis
+      description: Submit multiple images for analysis
+      operationId: batchAnalyzeImages
+      tags:
+        - Vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchVisionRequest'
+      responses:
+        '202':
+          description: Batch job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchJobResponse'
+
+  /vision/batch/{job_id}:
+    get:
+      summary: Get batch analysis results
+      operationId: getBatchAnalysisResults
+      tags:
+        - Vision
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Batch results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchVisionResults'
+
+  /federated/train:
+    post:
+      summary: Start federated training
+      description: |
+        Initiate federated learning across distributed nodes.
+        
+        ### Features
+        - Distributed training without centralizing data
+        - Secure aggregation
+        - Privacy-preserving learning
+        - Multiple framework support (PyTorch, TensorFlow)
+      operationId: startFederatedTraining
+      tags:
+        - Federated Learning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FederatedTrainingRequest'
+      responses:
+        '202':
+          description: Training job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FederatedTrainingResponse'
+
+  /federated/train/{job_id}:
+    get:
+      summary: Get federated training status
+      operationId: getFederatedTrainingStatus
+      tags:
+        - Federated Learning
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Training status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FederatedTrainingStatus'
+
+  /infer/predict:
+    post:
+      summary: Model inference
+      description: |
+        Run inference on trained models.
+        
+        ### Supported Models
+        - Image Classification
+        - Object Detection
+        - NLP Tasks
+        - Time Series Forecasting
+        - Custom Models
+      operationId: predict
+      tags:
+        - Inference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InferenceRequest'
+      responses:
+        '200':
+          description: Prediction result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InferenceResponse'
+        '400':
+          description: Invalid input
+        '503':
+          description: Model not available
+
+  /infer/batch:
+    post:
+      summary: Batch inference
+      description: Submit multiple instances for prediction
+      operationId: batchPredict
+      tags:
+        - Inference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchInferenceRequest'
+      responses:
+        '202':
+          description: Batch job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchJobResponse'
+
+  /models:
+    get:
+      summary: List models
+      description: Retrieve available models
+      operationId: listModels
+      tags:
+        - Inference
+      parameters:
+        - name: model_type
+          in: query
+          schema:
+            type: string
+            enum: [CLASSIFICATION, DETECTION, NLP, FORECASTING, CUSTOM]
+        - name: framework
+          in: query
+          schema:
+            type: string
+            enum: [PYTORCH, TENSORFLOW, SKLEARN, CUSTOM]
+      responses:
+        '200':
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModelInfo'
+
+  /models/{model_id}:
+    get:
+      summary: Get model details
+      operationId: getModelDetails
+      tags:
+        - Inference
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelDetails'
+
+  /projects:
+    get:
+      summary: List projects
+      operationId: listProjects
+      tags:
+        - Projects
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+
+    post:
+      summary: Create project
+      operationId: createProject
+      tags:
+        - Projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /projects/{project_id}:
+    get:
+      summary: Get project details
+      operationId: getProject
+      tags:
+        - Projects
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    put:
+      summary: Update project
+      operationId: updateProject
+      tags:
+        - Projects
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    delete:
+      summary: Delete project
+      operationId: deleteProject
+      tags:
+        - Projects
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Project deleted
+
+  /admin/metrics:
+    get:
+      summary: Get API metrics
+      description: System metrics (admin only)
+      operationId: getMetrics
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: Metrics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetrics'
+        '403':
+          description: Forbidden
+
+  /admin/usage/{user_id}:
+    get:
+      summary: Get user usage statistics
+      operationId: getUserUsageStats
+      tags:
+        - Admin
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUsageStats'
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+      required:
+        - status
+        - timestamp
+
+    DetailedStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        services:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            cache:
+              type: string
+              enum: [healthy, unhealthy]
+            quantum_processor:
+              type: string
+              enum: [healthy, unhealthy]
+            ml_engine:
+              type: string
+              enum: [healthy, unhealthy]
+
+    OptimizationRequest:
+      type: object
+      properties:
+        problem_type:
+          type: string
+          enum: [MAXCUT, TSP, VRP, QAOA, QUBO]
+        graph_size:
+          type: integer
+          minimum: 2
+          maximum: 1000
+        constraint_level:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+          default: MEDIUM
+        timeout_seconds:
+          type: integer
+          default: 300
+          minimum: 10
+          maximum: 3600
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+          default: NORMAL
+      required:
+        - problem_type
+        - graph_size
+
+    OptimizationResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [QUEUED, RUNNING, COMPLETED, FAILED]
+        created_at:
+          type: string
+          format: date-time
+        estimated_completion:
+          type: string
+          format: date-time
+
+    OptimizationResult:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [COMPLETED, FAILED, CANCELLED]
+        solution:
+          type: object
+          properties:
+            optimal_value:
+              type: number
+            variables:
+              type: array
+              items:
+                type: number
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+        execution_time_ms:
+          type: integer
+        quantum_circuits_used:
+          type: integer
+
+    VisionAnalysisResult:
+      type: object
+      properties:
+        analysis_type:
+          type: string
+        detections:
+          type: array
+          items:
+            type: object
+            properties:
+              class:
+                type: string
+              confidence:
+                type: number
+              bounding_box:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+                  width:
+                    type: number
+                  height:
+                    type: number
+        classification:
+          type: object
+          properties:
+            class:
+              type: string
+            confidence:
+              type: number
+        scene_description:
+          type: string
+        text_content:
+          type: string
+
+    BatchVisionRequest:
+      type: object
+      properties:
+        image_urls:
+          type: array
+          items:
+            type: string
+            format: uri
+        analysis_type:
+          type: string
+          enum: [DETECTION, CLASSIFICATION, SCENE, OCR]
+        callback_url:
+          type: string
+          format: uri
+
+    BatchJobResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [QUEUED, RUNNING]
+        created_at:
+          type: string
+          format: date-time
+
+    BatchVisionResults:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [RUNNING, COMPLETED, FAILED]
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisionAnalysisResult'
+        progress:
+          type: object
+          properties:
+            completed:
+              type: integer
+            total:
+              type: integer
+
+    FederatedTrainingRequest:
+      type: object
+      properties:
+        dataset_name:
+          type: string
+        framework:
+          type: string
+          enum: [PYTORCH, TENSORFLOW]
+        participants:
+          type: integer
+          minimum: 2
+        rounds:
+          type: integer
+          minimum: 1
+          default: 10
+        aggregation_method:
+          type: string
+          enum: [FedAvg, FedProx, FedAdam]
+          default: FedAvg
+        privacy_epsilon:
+          type: number
+          description: Privacy budget for differential privacy
+      required:
+        - dataset_name
+        - framework
+        - participants
+
+    FederatedTrainingResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [INITIALIZING, TRAINING, COMPLETED, FAILED]
+        round:
+          type: integer
+        total_rounds:
+          type: integer
+
+    FederatedTrainingStatus:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        current_round:
+          type: integer
+        total_rounds:
+          type: integer
+        participants_active:
+          type: integer
+        global_metrics:
+          type: object
+          properties:
+            accuracy:
+              type: number
+            loss:
+              type: number
+
+    InferenceRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+        input_data:
+          oneOf:
+            - type: string
+            - type: array
+            - type: object
+        parameters:
+          type: object
+          additionalProperties: true
+      required:
+        - model_id
+        - input_data
+
+    InferenceResponse:
+      type: object
+      properties:
+        prediction:
+          oneOf:
+            - type: string
+            - type: number
+            - type: array
+            - type: object
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        inference_time_ms:
+          type: integer
+        model_version:
+          type: string
+
+    BatchInferenceRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+        inputs:
+          type: array
+          items:
+            type: object
+        batch_size:
+          type: integer
+          default: 32
+        callback_url:
+          type: string
+          format: uri
+
+    ModelInfo:
+      type: object
+      properties:
+        model_id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        framework:
+          type: string
+        accuracy:
+          type: number
+        last_updated:
+          type: string
+          format: date-time
+
+    ModelDetails:
+      allOf:
+        - $ref: '#/components/schemas/ModelInfo'
+        - type: object
+          properties:
+            description:
+              type: string
+            input_schema:
+              type: object
+            output_schema:
+              type: object
+            parameters:
+              type: object
+
+    CreateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    Project:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        owner_id:
+          type: string
+
+    ProjectList:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    SystemMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        total_requests:
+          type: integer
+        average_latency_ms:
+          type: number
+        error_rate:
+          type: number
+        active_jobs:
+          type: integer
+
+    UserUsageStats:
+      type: object
+      properties:
+        user_id:
+          type: string
+        api_calls:
+          type: integer
+        data_processed_gb:
+          type: number
+        current_month_cost:
+          type: number
+        quota_remaining:
+          type: integer
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token authentication using JWT.
+        
+        Obtain a token by:
+        1. POST to /auth/token with credentials
+        2. Use token in Authorization header: `Bearer <token>`
+        
+        Token expires after 24 hours. Use refresh token endpoint to obtain new token.
