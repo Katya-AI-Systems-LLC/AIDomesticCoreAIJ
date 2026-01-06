@@ -10,7 +10,7 @@ pytest-mock==3.11.1
 coverage==7.3.0
 
 # Code Quality
-black==24.3.0
+black==25.12.0
 isort==5.13.2
 flake8==6.1.0
 flake8-docstrings==1.7.0
@@ -32,9 +32,9 @@ sphinx-autodoc-typehints==1.25.2
 sphinx-intl==2.1.0
 
 # Development
-ipython==8.17.2
+ipython==9.9.0
 jupyter==1.0.0
-jupyterlab==4.0.8
+jupyterlab==4.4.8
 notebook==7.2.2
 ipdb==0.13.13
 python-dotenv==1.0.0
@@ -63,6 +63,6 @@ pip-audit==2.6.1
 poetry==1.7.0
 
 # Additional utilities
-tqdm==4.66.1
+tqdm==4.66.3
 colorama==0.4.6
 click==8.1.7
